@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabela Periódica 3D & Simulador Atômico - 118 Elementos</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- OrbitControls -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Fonte Inter & JetBrains Mono -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #020617;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      color: #f8fafc;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Scrollbars customizadas */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.35);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(56, 189, 248, 0.6);
+    }
+    /* Sliders customizados */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.14);
+      height: 6px;
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #22d3ee;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(34, 211, 238, 0.9);
+      transition: transform 0.15s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    .glass-panel {
+      background: rgba(9, 14, 28, 0.84);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- ========================================================= -->
+  <!-- CENA 1: TABELA PERIÓDICA 3D PRINCIPAL                     -->
+  <!-- ========================================================= -->
+  <div id="table-canvas-container" class="relative w-screen h-screen overflow-hidden">
+
+    <!-- BARRA SUPERIOR: TÍTULO, BUSCA E FILTROS DE FAMÍLIA QUÍMICA -->
+    <header class="absolute top-0 left-0 right-0 z-20 p-3 sm:p-4 pointer-events-none flex flex-col gap-2.5">
+      <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        
+        <!-- Logo e Contador -->
+        <div class="glass-panel border border-slate-700/70 rounded-2xl px-4 py-2.5 flex items-center justify-between sm:justify-start gap-3.5 shadow-xl pointer-events-auto">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)] shrink-0">
+            <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3"/>
+              <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(30 12 12)"/>
+              <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-30 12 12)"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-sm sm:text-base font-extrabold tracking-tight text-white">Tabela Periódica 3D Interativa</h1>
+              <span class="text-[10px] font-mono-code font-bold uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">118 Elementos</span>
+            </div>
+            <p class="text-[11px] text-slate-400 hidden sm:block">Clique em qualquer elemento para abrir seu Átomo 3D e aplicações no cotidiano</p>
+          </div>
+        </div>
+
+        <!-- Busca Rápida + Seletor de Geometria 3D -->
+        <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 pointer-events-auto">
+          <!-- Campo de Busca -->
+          <div class="relative flex-1 sm:w-72">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input id="search-input" type="text" placeholder="Buscar nome, símbolo, Z ou uso (ex: bateria, ouro, 79)..."
+              class="w-full glass-panel border border-slate-700/80 focus:border-cyan-400 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 outline-none transition shadow-lg">
+            <button id="clear-search" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs px-1">✕</button>
+          </div>
+
+          <!-- Botões de Layout 3D -->
+          <div class="glass-panel border border-slate-700/80 rounded-xl p-1 flex items-center gap-1 shadow-lg">
+            <button data-layout="table" class="layout-btn px-2.5 py-1.5 rounded-lg text-xs font-bold bg-cyan-500 text-slate-950 shadow transition">
+              Tabela
+            </button>
+            <button data-layout="sphere" class="layout-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+              Esfera
+            </button>
+            <button data-layout="helix" class="layout-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+              Hélice
+            </button>
+            <button data-layout="grid" class="layout-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+              Grade 3D
+            </button>
+          </div>
+
+          <!-- Resetar Câmera da Tabela -->
+          <button id="btn-reset-table-cam" title="Centralizar Tabela 3D" class="glass-panel hover:bg-slate-800 border border-slate-700/80 text-cyan-300 p-2 rounded-xl shadow-lg transition active:scale-95">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros por Família Química -->
+      <div id="category-filters" class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 pointer-events-auto no-scrollbar">
+        <!-- Preenchido dinamicamente via JS -->
+      </div>
+    </header>
+
+    <!-- TOOLTIP FLUTUANTE NO HOVER 3D -->
+    <div id="hover-tooltip" class="hidden fixed z-30 pointer-events-none glass-panel border border-cyan-400/50 rounded-2xl p-3 shadow-[0_0_30px_rgba(0,0,0,0.85)] w-64 transition-opacity duration-150">
+      <div class="flex items-center justify-between gap-2 mb-1.5">
+        <span id="tt-z" class="text-xs font-mono-code font-bold text-cyan-300">Z = 6</span>
+        <span id="tt-cat" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">Ametal</span>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <span id="tt-sym" class="text-2xl font-extrabold text-white">C</span>
+        <span id="tt-name" class="text-sm font-bold text-slate-100">Carbono</span>
+        <span id="tt-mass" class="text-[11px] font-mono-code text-slate-400 ml-auto">12.011 u</span>
+      </div>
+      <p id="tt-daily" class="text-[11px] text-slate-300 mt-1.5 line-clamp-2 leading-snug"></p>
+      <div class="mt-2 pt-1.5 border-t border-slate-700/60 flex items-center justify-between text-[10px] text-cyan-400 font-semibold">
+        <span id="tt-shells">Camadas: 2 - 4</span>
+        <span>Clique para ver Átomo 3D →</span>
+      </div>
+    </div>
+
+    <!-- RODAPÉ DE INSTRUÇÕES E ACESSO RÁPIDO -->
+    <footer class="absolute bottom-3 left-3 right-3 z-20 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none">
+      <div class="glass-panel border border-slate-700/70 px-3.5 py-2 rounded-xl text-[11px] text-slate-300 flex items-center gap-3 pointer-events-auto shadow-lg">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          <strong>Arraste:</strong> Girar 3D
+        </span>
+        <span class="text-slate-600">|</span>
+        <span><strong>Scroll / Pinça:</strong> Zoom</span>
+        <span class="text-slate-600 hidden md:inline">|</span>
+        <span class="hidden md:inline"><strong>Botão Direito:</strong> Mover Câmera</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-cyan-300 font-semibold"><strong>Clique no bloco:</strong> Inspecionar Átomo</span>
+      </div>
+
+      <!-- Botão para abrir diretamente o átomo atualmente selecionado -->
+      <button id="btn-open-current-atom" class="glass-panel hover:bg-slate-800/90 border border-cyan-500/50 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-[0_0_20px_rgba(34,211,238,0.25)] flex items-center gap-2 pointer-events-auto transition active:scale-95">
+        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span>
+        <span>Ver Átomo Atual: <strong id="footer-current-el" class="text-cyan-300">Carbono (C)</strong></span>
+      </button>
+    </footer>
+
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- CENA 2: MODAL / LABORATÓRIO DE INSPEÇÃO ATÔMICA 3D        -->
+  <!-- ========================================================= -->
+  <div id="atom-modal" class="fixed inset-0 z-40 hidden bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 lg:p-6 transition-all">
+    
+    <div class="relative w-full max-w-7xl h-[94vh] sm:h-[90vh] bg-slate-900/95 border border-slate-700/80 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col lg:flex-row">
+
+      <!-- COLUNA ESQUERDA / SUPERIOR: VISUALIZADOR 3D DO ÁTOMO DEDICADO -->
+      <div class="relative w-full lg:w-7/12 h-[46%] sm:h-[50%] lg:h-full bg- radial from-slate-900 via-slate-950 to-black border-b lg:border-b-0 lg:border-r border-slate-800 flex flex-col justify-between overflow-hidden">
+        
+        <!-- Canvas Three.js do Átomo -->
+        <div id="atom-canvas-wrapper" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+        <!-- Topo sobre o Canvas do Átomo: Navegação Anterior / Próximo + Crachá do Elemento -->
+        <div class="relative z-10 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+          
+          <!-- Crachá Químico -->
+          <div class="glass-panel border border-slate-700/80 rounded-2xl p-2.5 sm:p-3 flex items-center gap-3 pointer-events-auto shadow-lg">
+            <div id="modal-badge-box" class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 flex flex-col items-center justify-center relative shadow-inner">
+              <span id="modal-el-z" class="text-[10px] font-mono-code font-bold absolute top-1 left-2">6</span>
+              <span id="modal-el-sym" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-1">C</span>
+              <span id="modal-el-mass-mini" class="text-[9px] font-mono-code text-slate-300">12.011</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 id="modal-el-name" class="text-lg sm:text-xl font-extrabold text-white">Carbono</h2>
+                <span id="modal-el-state" class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">Sólido</span>
+              </div>
+              <span id="modal-el-cat" class="inline-block text-[11px] font-semibold mt-0.5 text-cyan-300">Ametal Reativo</span>
+              <!-- Contagem de Partículas -->
+              <div class="flex items-center gap-3 mt-1 text-[11px] font-semibold">
+                <span class="flex items-center gap-1 text-rose-400">
+                  <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                  <strong id="modal-p-count">6</strong> Prótons
+                </span>
+                <span class="flex items-center gap-1 text-blue-400">
+                  <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                  <strong id="modal-n-count">6</strong> Nêutrons
+                </span>
+                <span class="flex items-center gap-1 text-cyan-300">
+                  <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                  <strong id="modal-e-count">6</strong> Elétrons
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botões de Navegação Z-1 / Z+1 -->
+          <div class="flex items-center gap-1.5 pointer-events-auto">
+            <button id="btn-prev-el" class="glass-panel hover:bg-slate-800 border border-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95">
+              <span>←</span>
+              <span id="prev-el-label" class="hidden sm:inline">5 B</span>
+            </button>
+            <button id="btn-next-el" class="glass-panel hover:bg-slate-800 border border-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95">
+              <span id="next-el-label" class="hidden sm:inline">7 N</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Rodapé sobre o Canvas do Átomo: Controles do Modelo Atômico 3D -->
+        <div class="relative z-10 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2 pointer-events-none mt-auto">
+          <!-- Alternador de Modelo: Camadas de Bohr vs Rutherford -->
+          <div class="glass-panel border border-slate-700/80 rounded-xl p-1 flex items-center gap-1 pointer-events-auto shadow-lg">
+            <button id="atom-mode-bohr" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-cyan-500 text-slate-950 transition">
+              Camadas de Bohr 3D
+            </button>
+            <button id="atom-mode-rutherford" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 hover:text-white transition">
+              Órbitas de Rutherford
+            </button>
+          </div>
+
+          <!-- Velocidade, Anéis e Pausa -->
+          <div class="glass-panel border border-slate-700/80 rounded-xl px-3 py-1.5 flex items-center gap-3 pointer-events-auto shadow-lg">
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-slate-300 font-medium hidden sm:inline">Velocidade</span>
+              <input id="atom-speed-slider" type="range" min="0" max="2.5" step="0.1" value="1" class="w-16 sm:w-24">
+            </div>
+            <button id="btn-toggle-atom-rings" class="text-[11px] font-semibold px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-600 transition">
+              Anéis: ON
+            </button>
+            <button id="btn-pause-atom" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 transition">
+              ⏸ Pausar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUNA DIREITA / INFERIOR: INFORMAÇÕES DETALHADAS E ONDE ENCONTRAR NO COTIDIANO -->
+      <div class="w-full lg:w-5/12 h-[54%] sm:h-[50%] lg:h-full overflow-y-auto p-4 sm:p-6 flex flex-col gap-5 bg-slate-900/90">
+        
+        <!-- Cabeçalho da Ficha + Botão Fechar -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-400">Inspeção Atômica & Aplicações</span>
+            <h3 class="text-base sm:text-lg font-bold text-white">Ficha Completa do Elemento</h3>
+          </div>
+          <button id="btn-close-modal" class="bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/40 text-slate-300 border border-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+            <span>✕</span>
+            <span>Voltar à Tabela 3D</span>
+          </button>
+        </div>
+
+        <!-- DESTAQUE PRINCIPAL: ONDE ENCONTRAR NO COTIDIANO -->
+        <div class="rounded-2xl bg-gradient-to-br from-cyan-950/60 via-slate-900 to-blue-950/50 border border-cyan-500/40 p-4 sm:p-5 shadow-[0_0_25px_rgba(34,211,238,0.1)]">
+          <div class="flex items-center gap-2.5 mb-2.5">
+            <div class="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div>
+              <h4 class="text-xs font-extrabold uppercase tracking-wider text-cyan-300">Onde Encontrar no Cotidiano</h4>
+              <p class="text-[11px] text-slate-400">Presença prática no dia a dia, natureza, tecnologia e ciência</p>
+            </div>
+          </div>
+
+          <p id="modal-cotidiano-text" class="text-xs sm:text-sm text-slate-100 leading-relaxed font-normal"></p>
+
+          <!-- Chips de Exemplos Práticos -->
+          <div class="mt-3.5 pt-3 border-t border-cyan-500/20">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Exemplos e Aplicações Principais:</span>
+            <div id="modal-examples-list" class="flex flex-wrap gap-1.5">
+              <!-- Preenchido via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- DISTRIBUIÇÃO ELETRÔNICA POR CAMADAS (K, L, M, N, O, P, Q) -->
+        <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300">Camadas Eletrônicas (Níveis de Energia)</h4>
+            <span id="modal-valence-info" class="text-[11px] font-mono-code text-cyan-400 font-semibold">Valência: 4 e⁻</span>
+          </div>
+          <div id="modal-shells-bars" class="grid grid-cols-7 gap-1.5">
+            <!-- Barras visuais K, L, M, N, O, P, Q geradas via JS -->
+          </div>
+          <!-- Configuração em Subníveis (Diagrama de Linus Pauling) -->
+          <div class="mt-3 pt-3 border-t border-slate-800/80">
+            <span class="block text-[10px] font-semibold uppercase text-slate-400 mb-1">Configuração Eletrônica (Subníveis):</span>
+            <div id="modal-subshells" class="font-mono-code text-xs text-cyan-300 bg-slate-900/90 border border-slate-800 px-3 py-2 rounded-xl break-words">
+              1s² 2s² 2p²
+            </div>
+          </div>
+        </div>
+
+        <!-- PROPRIEDADES FÍSICAS E ATÔMICAS -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-3">
+            <span class="text-[10px] uppercase font-semibold text-slate-400 block">Número Atômico (Z)</span>
+            <span id="prop-z" class="text-base font-extrabold text-white font-mono-code mt-0.5 block">6</span>
+          </div>
+          <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-3">
+            <span class="text-[10px] uppercase font-semibold text-slate-400 block">Massa Atômica</span>
+            <span id="prop-mass" class="text-base font-extrabold text-white font-mono-code mt-0.5 block">12.011 u</span>
+          </div>
+          <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-3">
+            <span class="text-[10px] uppercase font-semibold text-slate-400 block">Estado Físico (25°C)</span>
+            <span id="prop-state" class="text-base font-extrabold text-cyan-300 mt-0.5 block">Sólido</span>
+          </div>
+          <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-3">
+            <span class="text-[10px] uppercase font-semibold text-slate-400 block">Período / Camadas</span>
+            <span id="prop-period" class="text-sm font-bold text-white mt-0.5 block">2º Período</span>
+          </div>
+          <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-3">
+            <span class="text-[10px] uppercase font-semibold text-slate-400 block">Grupo / Coluna</span>
+            <span id="prop-group" class="text-sm font-bold text-white mt-0.5 block">Grupo 14</span>
+          </div>
+          <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-3">
+            <span class="text-[10px] uppercase font-semibold text-slate-400 block">Núcleons (P + N)</span>
+            <span id="prop-nucleons" class="text-sm font-bold text-white font-mono-code mt-0.5 block">12</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. CATEGORIAS / FAMÍLIAS QUÍMICAS E PALETA DE CORES
+    // =========================================================================
+    const CATEGORIES = [
+      { id: 0, name: 'Ametais Reativos', short: 'Ametais', hex: '#06b6d4', rgb: [6, 182, 212] },
+      { id: 1, name: 'Gases Nobres', short: 'Gases Nobres', hex: '#a855f7', rgb: [168, 85, 247] },
+      { id: 2, name: 'Metais Alcalinos', short: 'Alcalinos', hex: '#f43f5e', rgb: [244, 63, 94] },
+      { id: 3, name: 'Metais Alcalino-terrosos', short: 'Alcalino-terrosos', hex: '#fb923c', rgb: [251, 146, 60] },
+      { id: 4, name: 'Semimetais', short: 'Semimetais', hex: '#10b981', rgb: [16, 185, 129] },
+      { id: 5, name: 'Halogênios', short: 'Halogênios', hex: '#eab308', rgb: [234, 179, 8] },
+      { id: 6, name: 'Outros Metais', short: 'Outros Metais', hex: '#60a5fa', rgb: [96, 165, 250] },
+      { id: 7, name: 'Metais de Transição', short: 'Transição', hex: '#38bdf8', rgb: [56, 189, 248] },
+      { id: 8, name: 'Lantanídeos', short: 'Lantanídeos', hex: '#ec4899', rgb: [236, 72, 153] },
+      { id: 9, name: 'Actinídeos', short: 'Actinídeos', hex: '#f97316', rgb: [249, 115, 22] }
+    ];
+
+    const SHELL_NAMES = ['K', 'L', 'M', 'N', 'O', 'P', 'Q'];
+    const SHELL_COLORS = [0xff5577, 0xffaa22, 0x22dd88, 0x00f5d4, 0x38bdf8, 0xa855f7, 0xec4899];
+
+    // =========================================================================
+    // 2. BASE DE DADOS COMPLETA DOS 118 ELEMENTOS QUÍMICOS (EM PORTUGUÊS)
+    // =========================================================================
+    // Estrutura compacta: [Z, Símbolo, Nome, Massa, CatID, Estado, Camadas[], Col, Row, OndeEncontrar, Exemplos[]]
+    const RAW_ELEMENTS = [
+      [1, 'H', 'Hidrogênio', '1.008', 0, 'Gasoso', [1], 1, 1,
+        'O elemento mais abundante do universo! No nosso cotidiano está presente em toda molécula de água que bebemos, nos alimentos e compostos orgânicos do corpo humano, além de ser usado como combustível limpo em células a combustível e foguetes espaciais.',
+        ['Água potável (H₂O)', 'Corpo humano e alimentos', 'Combustível de foguetes']],
+      [2, 'He', 'Hélio', '4.0026', 1, 'Gasoso', [2], 18, 1,
+        'Segundo elemento mais abundante no cosmos, formado na fusão nuclear das estrelas. No dia a dia, você o encontra em balões de festa que flutuam, no resfriamento de ímãs supercondutores de máquinas de Ressonância Magnética (RM) nos hospitais e em cilindros de mergulho profundo.',
+        ['Balões de festa flutuantes', 'Aparelhos de Ressonância Magnética', 'Misturas respiratórias de mergulho']],
+      [3, 'Li', 'Lítio', '6.94', 2, 'Sólido', [2,1], 1, 2,
+        'Metal mais leve que existe. Está literalmente na palma da sua mão todos os dias: é o componente essencial das baterias recarregáveis de íons de lítio que alimentam celulares, notebooks e carros elétricos, além de ser usado em medicamentos estabilizadores de humor e graxas industriais.',
+        ['Baterias de celulares e notebooks', 'Carros elétricos', 'Cerâmicas e vidros resistentes ao calor']],
+      [4, 'Be', 'Berílio', '9.0122', 3, 'Sólido', [2,2], 2, 2,
+        'Na natureza forma pedras preciosas fascinantes como a esmeralda e a água-marinha. Na tecnologia, por ser transparente aos raios X e superleve, está presente nas janelas de equipamentos médicos de raio-X, telescópios espaciais (como o James Webb) e molas de relógios de alta precisão.',
+        ['Esmeraldas e águas-marinhas', 'Janelas de aparelhos de Raios X', 'Espelhos de telescópios espaciais']],
+      [5, 'B', 'Boro', '10.81', 4, 'Sólido', [2,3], 13, 2,
+        'Muito presente na sua cozinha! O boro compõe o vidro borossilicato (tipo Pyrex), capaz de ir do forno ao freezer sem trincar. Também está presente em colírios antissépticos (ácido bórico), detergentes, fibra de vidro e fertilizantes agrícolas essenciais para as plantas.',
+        ['Travessas de vidro refratário (Pyrex)', 'Colírios e antissépticos', 'Fibra de vidro e telas de LCD']],
+      [6, 'C', 'Carbono', '12.011', 0, 'Sólido', [2,4], 14, 2,
+        'A base química de toda a vida na Terra! Está no grafite do seu lápis, no carvão do churrasco, nos diamantes de joalheria, nas fibras de carbono de bicicletas esportivas, nos plásticos, nos combustíveis e no DNA, proteínas e carboidratos do seu próprio corpo.',
+        ['Grafite de lápis e diamantes', 'DNA e moléculas de todos os seres vivos', 'Fibras de carbono e aços']],
+      [7, 'N', 'Nitrogênio', '14.007', 0, 'Gasoso', [2,5], 15, 2,
+        'Você respira nitrogênio a cada segundo: ele representa 78% do ar atmosférico! No cotidiano é usado para inflar pacotes de batata chips (para não oxidar nem amassar), conservar alimentos, produzir fertilizantes agrícolas (NPK) e como nitrogênio líquido ultracongelante em clínicas e gastronomia.',
+        ['78% do ar que respiramos', 'Ar protetor em pacotes de salgadinhos', 'Fertilizantes agrícolas e proteínas']],
+      [8, 'O', 'Oxigênio', '15.999', 0, 'Gasoso', [2,6], 16, 2,
+        'Indispensável para a vida! Compõe 21% do ar que respiramos e 65% da massa do corpo humano (principalmente na água). Está presente em toda combustão (fogo, motores), cilindros hospitalares, tratamento de água com ozônio (O₃) e minerais da crosta terrestre.',
+        ['Respiração humana e animal (21% do ar)', 'Água (89% do peso da água)', 'Cilindros médicos e combustão']],
+      [9, 'F', 'Flúor', '18.998', 5, 'Gasoso', [2,7], 17, 2,
+        'Presente todos os dias na sua escovação dental! O flúor (na forma de fluoreto) é adicionado à pasta de dente e à água encanada para fortalecer o esmalte dentário contra cáries. Também compõe o revestimento antiaderente (Teflon) das frigideiras e gases refrigerantes de geladeiras e ar-condicionado.',
+        ['Creme dental e água fluoretada', 'Panelas antiaderentes (Teflon)', 'Sistemas de refrigeração']],
+      [10, 'Ne', 'Neônio', '20.180', 1, 'Gasoso', [2,8], 18, 2,
+        'Famoso pelos letreiros luminosos de "Neon" que brilham em tom vermelho-alaranjado vibrante quando atravessados por corrente elétrica. Também é encontrado em lâmpadas indicadoras de tensão, para-raios de proteção elétrica e lasers de hélio-neônio usados em leitores ópticos e laboratórios.',
+        ['Letreiros luminosos comerciais', 'Lâmpadas testes de voltagem', 'Lasers de alinhamento óptico']],
+      [11, 'Na', 'Sódio', '22.990', 2, 'Sólido', [2,8,1], 1, 3,
+        'Onipresente na alimentação diária: junto com o cloro, forma o cloreto de sódio (sal de cozinha). No corpo humano é vital para a transmissão dos impulsos nervosos e equilíbrio hídrico. Também está no bicarbonato de sódio, na soda cáustica (sabões) e nas lâmpadas amarelas de iluminação pública.',
+        ['Sal de cozinha (NaCl)', 'Bicarbonato de sódio e sabões', 'Lâmpadas de vapor de sódio em postes']],
+      [12, 'Mg', 'Magnésio', '24.305', 3, 'Sólido', [2,8,2], 2, 3,
+        'O átomo central da clorofila que dá a cor verde às plantas e permite a fotossíntese! No dia a dia você o consome em folhas verdes, castanhas e chocolate amargo. Na indústria é usado em rodas esportivas de liga leve, carcaças de notebooks, antiácidos estomacais (leite de magnésia) e fogos de artifício brancos.',
+        ['Vegetais verdes (clorofila) e suplementos', 'Rodas automotivas e carcaças de notebooks', 'Leite de magnésia e fogos de artifício']],
+      [13, 'Al', 'Alumínio', '26.982', 6, 'Sólido', [2,8,3], 13, 3,
+        'O metal mais abundante da crosta terrestre e um campeão de reciclagem! Está nas latinhas de refrigerante, no papel-alumínio da cozinha, em panelas, esquadrias de janelas, cabos de transmissão elétrica de alta tensão e na fuselagem leve de aviões e bicicletas.',
+        ['Latinhas de bebidas e papel-alumínio', 'Panelas e janelas residenciais', 'Fuselagem de aviões e bicicletas']],
+      [14, 'Si', 'Silício', '28.085', 4, 'Sólido', [2,8,4], 14, 3,
+        'O coração da era digital e das praias! Na forma de sílica (SiO₂) compõe a areia da praia, o quartzo e o vidro comum. Purificado, é o semicondutor que forma os microchips e processadores de todos os computadores e smartphones, além dos painéis solares fotovoltaicos e borrachas de silicone.',
+        ['Processadores de computador e celular', 'Areia da praia, vidro e cimento', 'Painéis de energia solar e silicones']],
+      [15, 'P', 'Fósforo', '30.974', 0, 'Sólido', [2,8,5], 15, 3,
+        'Essencial para a nossa energia vital (molécula de ATP), para a estrutura do DNA e para a rigidez dos nossos ossos e dentes (fosfato de cálcio). No cotidiano, o fósforo vermelho está na lixa lateral das caixas de fósforo, além de ser indispensável nos fertilizantes agrícolas que produzem nossos alimentos.',
+        ['Ossos, dentes e DNA humano', 'Lateral das caixas de palitos de fósforo', 'Fertilizantes agrícolas (NPK)']],
+      [16, 'S', 'Enxofre', '32.06', 0, 'Sólido', [2,8,6], 16, 3,
+        'Conhecido desde a antiguidade! Dá o aroma característico ao alho, à cebola e aos ovos, além de compor aminoácidos da queratina (que dá força aos cabelos e unhas). Na indústria é usado na vulcanização da borracha dos pneus de carro, baterias automotivas (ácido sulfúrico) e shampoos anticaspa.',
+        ['Pneus de borracha vulcanizada', 'Alho, cebola e queratina do cabelo', 'Baterias de carros e fungicidas']],
+      [17, 'Cl', 'Cloro', '35.45', 5, 'Gasoso', [2,8,7], 17, 3,
+        'Guardião da saúde pública! É usado no tratamento de água potável e piscinas para eliminar bactérias e vírus, na água sanitária (hipoclorito de sódio) para limpeza doméstica, no sal de cozinha (NaCl), no ácido clorídrico do nosso suco gástrico (digestão) e nos tubos hidráulicos de PVC.',
+        ['Água tratada da torneira e piscinas', 'Água sanitária e desinfetantes', 'Tubos e conexões de PVC']],
+      [18, 'Ar', 'Argônio', '39.948', 1, 'Gasoso', [2,8,8], 18, 3,
+        'O gás nobre mais abundante na Terra (quase 1% do ar que respiramos). Como é totalmente inerte, preenche o interior das lâmpadas incandescentes e fluorescentes para impedir que o filamento queime, o espaço entre vidros duplos de janelas térmicas e protege soldas metálicas (solda MIG/TIG).',
+        ['Interior de lâmpadas domésticas', 'Janelas antirruído de vidro duplo', 'Gás de proteção em soldagem industrial']],
+      [19, 'K', 'Potássio', '39.098', 2, 'Sólido', [2,8,8,1], 1, 4,
+        'Famoso na banana, água de coco, batata e abacate! No corpo humano o potássio regula os batimentos cardíacos, a contração muscular (evitando cãibras) e os sinais nervosos. Também é um dos três macronutrientes essenciais dos fertilizantes (NPK), além de estar em sabões líquidos e substitutos do sal.',
+        ['Bananas, água de coco e abacate', 'Funcionamento dos músculos e coração', 'Adubos e fertilizantes agrícolas']],
+      [20, 'Ca', 'Cálcio', '40.078', 3, 'Sólido', [2,8,8,2], 2, 4,
+        'O mineral mais abundante no corpo humano: forma 99% da estrutura dos nossos ossos e dentes! No dia a dia está no leite, queijos, iogurtes, casca de ovo, conchas do mar, giz escolar, gesso de parede, mármore e no cimento/concreto de todas as construções.',
+        ['Leite, queijos, ossos e dentes', 'Cimento, concreto, cal e mármore', 'Conchas marinhas e casca de ovo']],
+      [21, 'Sc', 'Escândio', '44.956', 7, 'Sólido', [2,8,9,2], 3, 4,
+        'Adicionado ao alumínio, cria ligas metálicas ultraleves e resistentes que não trincam sob estresse. Você o encontra em quadros de bicicletas de competição de alto desempenho, tacos de beisebol e golfe, componentes aeroespaciais e nas potentes lâmpadas de vapor metálico que iluminam estádios de futebol para transmissões de TV.',
+        ['Bicicletas profissionais de alta performance', 'Refletores de estádios de futebol', 'Ligas aeroespaciais leves']],
+      [22, 'Ti', 'Titânio', '47.867', 7, 'Sólido', [2,8,10,2], 4, 4,
+        'Forte como o aço, mas 45% mais leve e totalmente biocompatível (o corpo humano não o rejeita!). Está em implantes dentários, próteses ortopédicas de quadril/joelho, armações de óculos leves e relógios. Já seu óxido (dióxido de titânio) dá o branco brilhante ao protetor solar, pasta de dente e tintas de parede.',
+        ['Implantes dentários e próteses médicas', 'Protetor solar, tintas brancas e creme dental', 'Armações de óculos e aeronaves']],
+      [23, 'V', 'Vanádio', '50.942', 7, 'Sólido', [2,8,11,2], 5, 4,
+        'O segredo das ferramentas indestrutíveis! Olhe na sua caixa de ferramentas: chaves de boca, alicates e chaves de fenda trazem gravado "Cromo-Vanádio" (Cr-V), uma liga de aço super-resistente ao desgaste e torção. Também é usado em molas de suspensão automotiva e baterias gigantes de fluxo para armazenar energia solar e eólica.',
+        ['Chaves de boca e ferramentas Cromo-Vanádio', 'Molas e eixos de carros e caminhões', 'Baterias estacionárias de energia limpa']],
+      [24, 'Cr', 'Cromo', '51.996', 7, 'Sólido', [2,8,13,1], 6, 4,
+        'Responsável pelo brilho espelhado e pela resistência à ferrugem! É o elemento que transforma o ferro comum no aço inoxidável dos talheres, pias e panelas da sua cozinha. Também reveste torneiras e para-choques cromados, além de dar a cor vermelha intensa aos rubis e verde às esmeraldas.',
+        ['Talheres, pias e panelas de aço inox', 'Torneiras e peças automotivas cromadas', 'Cor natural dos rubis e curtimento de couro']],
+      [25, 'Mn', 'Manganês', '54.938', 7, 'Sólido', [2,8,13,2], 7, 4,
+        'Presente dentro das pilhas alcalinas comuns do controle remoto da sua TV (como dióxido de manganês)! Na indústria é indispensável na fabricação de todos os aços (como trilhos de trem e cofres), nas latinhas de alumínio para aumentar a rigidez e, em pequenas quantidades, em alimentos integrais para as enzimas do nosso corpo.',
+        ['Pilhas alcalinas comuns (AA / AAA)', 'Trilhos de trem e aços de construção', 'Cereais integrais, nozes e chás']],
+      [26, 'Fe', 'Ferro', '55.845', 7, 'Sólido', [2,8,14,2], 8, 4,
+        'O metal mais utilizado pela humanidade e essencial para o nosso sangue! No corpo humano, o ferro fica no centro da hemoglobina, dando a cor vermelha ao sangue e transportando oxigênio dos pulmões para todas as células (encontrado no feijão, carnes e espinafre). Na sociedade, forma o aço de pontes, prédios, carros, navios e eletrodomésticos.',
+        ['Hemoglobina do sangue (feijão e carnes)', 'Aço de carros, pontes e edifícios', 'Ímãs, ferramentas e portões']],
+      [27, 'Co', 'Cobalto', '58.933', 7, 'Sólido', [2,8,15,2], 9, 4,
+        'Essencial tanto na biologia quanto na tecnologia: o cobalto é o átomo central da Vitamina B12 (cobalamina), fundamental para o sistema nervoso. No dia a dia tecnológico, compõe o cátodo das baterias de smartphones e veículos elétricos, superligas de turbinas, ímãs permanentes e o famoso pigmento "azul cobalto" de porcelanas e vidros.',
+        ['Vitamina B12 (essencial ao organismo)', 'Baterias de smartphones e carros elétricos', 'Pigmento azul de porcelanas e vidros']],
+      [28, 'Ni', 'Níquel', '58.693', 7, 'Sólido', [2,8,16,2], 10, 4,
+        'Muito presente na sua carteira: as moedas prateadas do Real contêm níquel (ou aço revestido de níquel) por sua alta resistência à corrosão e brilho! Também faz parte do aço inoxidável da cozinha, de cordas de guitarra elétrica, baterias recarregáveis e resistências internas de chuveiros elétricos, torradeiras e secadores de cabelo (liga níquel-cromo).',
+        ['Moedas em circulação e bijuterias', 'Resistências de chuveiros e torradeiras', 'Aço inoxidável e cordas de guitarra']],
+      [29, 'Cu', 'Cobre', '63.546', 7, 'Sólido', [2,8,18,1], 11, 4,
+        'Conduz a eletricidade da sua casa inteira! Praticamente todos os fios elétricos, cabos de carregadores, motores de geladeira/ventilador e trilhas de placas eletrônicas são feitos de cobre. Também forma o bronze (cobre + estanho) de estátuas e sinos, e o latão (cobre + zinco) de chaves de porta, cadeados e instrumentos musicais de sopro.',
+        ['Fios elétricos residenciais e carregadores', 'Chaves de porta e cadeados (latão)', 'Tubulações de água/gás e moedas']],
+      [30, 'Zn', 'Zinco', '65.38', 7, 'Sólido', [2,8,18,2], 12, 4,
+        'Protetor tanto da nossa imunidade quanto do aço! No organismo humano, o zinco fortalece o sistema imunológico e a cicatrização. No cotidiano está nas pomadas contra assaduras de bebês (óxido de zinco), no aço galvanizado de calhas de telhado e postes (que não enferrujam), no latão das chaves e nas pilhas comuns.',
+        ['Pomadas para assaduras e protetores solares', 'Calhas, telhas e postes galvanizados', 'Suplementos de imunidade e latão']],
+      [31, 'Ga', 'Gálio', '69.723', 6, 'Sólido', [2,8,18,3], 13, 4,
+        'Um metal fascinante que derrete a apenas 29,7°C — basta segurá-lo na mão para virar líquido! No seu dia a dia, o nitreto e o arsenieto de gálio (GaN / GaAs) são a base das lâmpadas de LED brancas e azuis que iluminam sua casa, da iluminação das telas de celular, dos carregadores rápidos modernos (GaN) e dos termômetros clínicos sem mercúrio.',
+        ['Lâmpadas de LED residenciais e telas', 'Carregadores ultrarrápidos (GaN) de celular', 'Termômetros clínicos ecológicos (Galinstan)']],
+      [32, 'Ge', 'Germânio', '72.630', 4, 'Sólido', [2,8,18,4], 14, 4,
+        'Semicondutor histórico usado nos primeiros transistores da eletrônica. Hoje você se beneficia dele todos os dias ao acessar a internet: o germânio é adicionado ao núcleo dos cabos de fibra óptica para manter o sinal de luz veloz e sem perdas, além de ser usado em lentes de câmeras térmicas de visão noturna e pedais de guitarra vintage (Fuzz).',
+        ['Cabos de fibra óptica de internet rápida', 'Lentes de câmeras térmicas infravermelhas', 'Chips de alta velocidade e células solares']],
+      [33, 'As', 'Arsênio', '74.922', 4, 'Sólido', [2,8,18,5], 15, 4,
+        'Embora seus compostos puros sejam historicamente conhecidos pela toxicidade, na tecnologia moderna o arsenieto de gálio (GaAs) está dentro do seu smartphone amplificando sinais de 4G, 5G e Wi-Fi, além de compor diodos laser infravermelhos e células solares de satélites espaciais.',
+        ['Chips transmissores de 5G e Wi-Fi', 'Diodos laser e LEDs infravermelhos', 'Células solares de satélites']],
+      [34, 'Se', 'Selênio', '78.971', 0, 'Sólido', [2,8,18,6], 16, 4,
+        'A Castanha-do-Brasil (castanha-do-pará) é a maior fonte natural de selênio do planeta: apenas uma unidade já supre a necessidade diária desse antioxidante essencial para a nossa tireoide! Também está em shampoos anticaspa (sulfeto de selênio), cilindros de impressoras a laser/copiadoras e na fabricação de vidros arquitetônicos.',
+        ['Castanha-do-pará (antioxidante vital)', 'Shampoos medicinais anticaspa', 'Fotocopiadoras e células fotoelétricas']],
+      [35, 'Br', 'Bromo', '79.904', 5, 'Líquido', [2,8,18,7], 17, 4,
+        'O único ametal líquido em temperatura ambiente! No seu cotidiano está invisivelmente protegendo sua casa: compostos de bromo são usados como retardantes de chamas nas carcaças plásticas de TVs, computadores, cabos e estofados para evitar incêndios. Também é usado para higienizar a água de spas e hidromassagens aquecidas (onde não deixa cheiro forte como o cloro).',
+        ['Plásticos retardantes de chama em eletrônicos', 'Tratamento de água de spas e jacuzzis', 'Filmes fotográficos clássicos (AgBr)']],
+      [36, 'Kr', 'Criptônio', '83.798', 1, 'Gasoso', [2,8,18,8], 18, 4,
+        'Gás nobre presente em traços no ar atmosférico. No cotidiano é usado no interior de lâmpadas halógenas de alto brilho (como faróis automotivos e lanternas potentes), em flashes fotográficos de alta velocidade, em janelas de isolamento térmico avançado e em lasers médicos para cirurgias oculares de retina.',
+        ['Faróis halógenos automotivos e lanternas', 'Flashes fotográficos de alta velocidade', 'Lasers oftalmológicos e janelas térmicas']],
+      [37, 'Rb', 'Rubídio', '85.468', 2, 'Sólido', [2,8,18,8,1], 1, 5,
+        'Metal alcalino extremamente reativo. Embora você não o toque diretamente, usa sua tecnologia ao abrir o GPS do celular ou fazer um Pix: o rubídio é o coração dos relógios atômicos compactos em satélites GPS e torres de telecomunicações que sincronizam a internet global. Também produz a cor roxa-violeta em fogos de artifício.',
+        ['Relógios atômicos de satélites de GPS', 'Sincronização de redes de celular e internet', 'Fogos de artifício de cor violeta']],
+      [38, 'Sr', 'Estrôncio', '87.62', 3, 'Sólido', [2,8,18,8,2], 2, 5,
+        'Se você já viu fogos de artifício vermelhos brilhantes no Ano Novo ou sinalizadores de emergência, viu o estrôncio em ação! Mais perto ainda: o cloreto de estrôncio é usado em cremes dentais específicos para dentes sensíveis (bloqueando os microcanais da dentina) e em ímãs de ferrite de alto-falantes e de geladeira.',
+        ['Cremes dentais para sensibilidade dentária', 'Fogos de artifício vermelhos vibrantes', 'Ímãs de geladeira e de alto-falantes']],
+      [39, 'Y', 'Ítrio', '88.906', 7, 'Sólido', [2,8,18,9,2], 3, 5,
+        'Olhe para a tela ou lâmpada LED branca do seu quarto: o ítrio forma o revestimento de fósforo YAG (granada de ítrio-alumínio) que converte a luz azul do chip em luz branca agradável! Também compõe os famosos lasers médicos e industriais Nd:YAG (usados para remoção de tatuagens, cirurgias oculares e corte de metais) e velas de ignição automotivas.',
+        ['Lâmpadas de LED brancas e telas', 'Lasers Nd:YAG (estética e oftalmologia)', 'Supercondutores e lentes de câmeras']],
+      [40, 'Zr', 'Zircônio', '91.224', 7, 'Sólido', [2,8,18,10,2], 4, 5,
+        'Supercomum no consultório odontológico e nas joalherias! O dióxido de zircônio (zircônia) é usado para fazer coroas e próteses dentárias brancas ultrarresistentes, facas de cerâmica de cozinha que não perdem o corte e a "zircônia cúbica", a pedra sintética brilhante mais usada em anéis e brincos para imitar o diamante.',
+        ['Coroas e próteses dentárias de zircônia', 'Joias com pedras de zircônia cúbica', 'Facas de cerâmica e desodorantes']],
+      [41, 'Nb', 'Nióbio', '92.906', 7, 'Sólido', [2,8,18,12,1], 5, 5,
+        'Orgulho mineral brasileiro: o Brasil detém mais de 90% das reservas e produção mundial de nióbio (especialmente em Araxá-MG e Catalão-GO)! Basta adicionar gramas de nióbio a uma tonelada de aço para deixá-lo muito mais leve e resistente em carros, pontes (como o Viaduto Millau), gasodutos, turbinas de avião e ímãs supercondutores de Ressonância Magnética.',
+        ['Aços de alta resistência em carros e pontes', 'Turbinas de avião e foguetes espaciais', 'Ímãs de Ressonância Magnética e piercings hipoalergênicos']],
+      [42, 'Mo', 'Molibdênio', '95.95', 7, 'Sólido', [2,8,18,13,1], 6, 5,
+        'Um elemento essencial tanto para a vida quanto para a mecânica pesada! No nosso corpo e nas plantas (como feijão, lentilha e ervilha), o molibdênio ativa enzimas vitais do metabolismo. Na indústria, suporta temperaturas extremas em aços inoxidáveis marítimos, engrenagens de carros e graxas lubrificantes escuras (bissulfeto de molibdênio) para rolamentos e correntes.',
+        ['Leguminosas (feijão, lentilha) e enzimas humanas', 'Graxas lubrificantes de alta pressão', 'Aços inoxidáveis resistentes à maresia']],
+      [43, 'Tc', 'Tecnécio', '98', 7, 'Sintético', [2,8,18,13,2], 7, 5,
+        'O elemento mais leve da tabela periódica sem isótopos estáveis (seu nome vem do grego "artificial"). Apesar disso, salva milhões de vidas todos os anos nos hospitais: o Tecnécio-99m é o radioisótopo mais utilizado do mundo em exames de cintilografia médica para diagnosticar problemas no coração, ossos, rins e tireoide com baixíssima radiação.',
+        ['Exames de cintilografia cardíaca e óssea', 'Diagnóstico por imagem em medicina nuclear', 'Hospitais e clínicas de radiologia']],
+      [44, 'Ru', 'Rutênio', '101.07', 7, 'Sólido', [2,8,18,15,1], 8, 5,
+        'Metal nobre do grupo da platina que está escondido dentro dos seus aparelhos eletrônicos: a maioria dos micro-resistores de montagem superficial (SMD) nas placas-mãe de celulares e TVs são feitos de óxido de rutênio! Também é usado para endurecer joias de platina, pontas de canetas-tinteiro de luxo e aumentar a capacidade de discos rígidos magnéticos.',
+        ['Placas eletrônicas de celulares e TVs (resistores)', 'Pontas duráveis de canetas-tinteiro', 'Joias de platina e contatos elétricos']],
+      [45, 'Rh', 'Ródio', '102.91', 7, 'Sólido', [2,8,18,16,1], 9, 5,
+        'Um dos metais mais raros, brilhantes e valiosos do planeta! Está presente em quase todos os carros modernos dentro do catalisador do escapamento (reduzindo gases tóxicos NOx). Na joalheria, o "banho de ródio" é o que dá aquele brilho prateado espelhado e antialérgico às alianças e anéis de ouro branco e prata.',
+        ['Banho de ródio em alianças de ouro branco', 'Catalisadores antipoluição de automóveis', 'Espelhos ópticos de alta refletividade']],
+      [46, 'Pd', 'Paládio', '106.42', 7, 'Sólido', [2,8,18,18], 10, 5,
+        'Metal precioso fundamental para o ar limpo das cidades: junto à platina e ao ródio, o paládio fica no catalisador dos carros convertendo até 90% dos gases nocivos do motor em vapor de água e gás carbônico menos tóxico. Também é usado para fazer ouro branco de alta joalheria, capacitores cerâmicos de celulares e coroas odontológicas.',
+        ['Catalisadores de escapamento automotivo', 'Ligas de Ouro Branco na joalheria', 'Capacitores internos de smartphones']],
+      [47, 'Ag', 'Prata', '107.87', 7, 'Sólido', [2,8,18,18,1], 11, 5,
+        'O melhor condutor elétrico e térmico de toda a tabela periódica, além de ter o maior brilho refletivo! No cotidiano está em anéis, colares, talheres de prata, espelhos domésticos, contatos elétricos de interruptores, pastas térmicas de processadores, painéis solares e em tecidos esportivos ou curativos com nanopartículas de prata antibacterianas (que evitam mau cheiro).',
+        ['Joias, alianças, talheres e espelhos', 'Roupas esportivas e curativos antibacterianos', 'Painéis solares e contatos eletrônicos']],
+      [48, 'Cd', 'Cádmio', '112.41', 7, 'Sólido', [2,8,18,18,2], 12, 5,
+        'Historicamente muito usado nas baterias recarregáveis de Níquel-Cádmio (NiCd) de telefones sem fio e ferramentas elétricas. Na arte, deu origem aos vibrantes pigmentos amarelo, laranja e vermelho de cádmio adorados por pintores como Monet e Van Gogh. Hoje também é empregado em painéis solares de telureto de cádmio (CdTe) e televisores de pontos quânticos (QLED).',
+        ['Tintas artísticas profissionais (Amarelo de Cádmio)', 'Painéis solares de filme fino (CdTe)', 'Baterias industriais de emergência']],
+      [49, 'In', 'Índio', '114.82', 6, 'Sólido', [2,8,18,18,3], 13, 5,
+        'Toda vez que você toca na tela do seu smartphone, tablet ou caixa eletrônico, está interagindo com o Índio! Na forma de Óxido de Índio e Estanho (ITO), ele cria uma película que é simultaneamente transparente como vidro e condutora de eletricidade, tornando possíveis as telas sensíveis ao toque (touchscreen), TVs de LCD e OLED.',
+        ['Telas Touchscreen de todos os smartphones', 'Monitores e TVs de LED / OLED', 'Soldas especiais de baixa temperatura']],
+      [50, 'Sn', 'Estanho', '118.71', 6, 'Sólido', [2,8,18,18,4], 14, 5,
+        'Presente na despensa da sua casa e dentro de todos os seus eletrônicos! O estanho reveste internamente as latas de aço de alimentos em conserva (milho, ervilha, leite condensado - a famosa "folha de flandres") para não enferrujar. Também é o componente principal da solda eletrônica que prende as peças nas placas de circuito e forma o bronze junto ao cobre.',
+        ['Latas de alimentos em conserva (leite condensado, milho)', 'Solda eletrônica em placas de circuito', 'Estatuetas de bronze e peltre']],
+      [51, 'Sb', 'Antimônio', '121.76', 4, 'Sólido', [2,8,18,18,5], 15, 5,
+        'Conhecido desde o Antigo Egito (onde era usado como maquiagem para os olhos). Hoje, no cotidiano, o antimônio é endurecedor das placas de chumbo das baterias automotivas, componente de materiais retardantes de chamas em tecidos, colchões e capas de cabos elétricos, além de ser usado em semicondutores infravermelhos.',
+        ['Baterias de chumbo-ácido de automóveis', 'Tecidos e cabos resistentes ao fogo', 'Maquiagem histórica (Kohl) e ligas metálicas']],
+      [52, 'Te', 'Telúrio', '127.60', 4, 'Sólido', [2,8,18,18,6], 16, 5,
+        'Semimetal raro que já esteve na sua estante: ligas de telúrio formavam a camada de gravação dos CDs e DVDs regraváveis (CD-RW / DVD-RW)! Hoje está nos modernos painéis solares fotovoltaicos de telureto de cádmio, em pequenos refrigeradores termoelétricos portáteis (pastilhas Peltier de bebedouros eletrônicos) e em ligas de aço e cobre fáceis de usinar.',
+        ['Bebedouros eletrônicos (pastilhas Peltier)', 'Painéis solares de alta eficiência', 'Discos ópticos regraváveis (CD-RW / Blu-ray)']],
+      [53, 'I', 'Iodo', '126.90', 5, 'Sólido', [2,8,18,18,7], 17, 5,
+        'Olhe na embalagem do sal de cozinha da sua casa: por lei, todo sal é "Sal Iodado"! O iodo é indispensável para que a nossa glândula tireoide produza hormônios que regulam o metabolismo e o desenvolvimento cerebral. Também está nos frutos do mar, nos antissépticos tópicos (Povidine / álcool iodado) para ferimentos e nos contrastes de exames de tomografia.',
+        ['Sal de cozinha iodado e frutos do mar', 'Antissépticos de farmácia (Povidine)', 'Contraste para exames de Tomografia']],
+      [54, 'Xe', 'Xenônio', '131.29', 1, 'Gasoso', [2,8,18,18,8], 18, 5,
+        'Gás nobre pesado famoso pelos faróis automotivos de "Xenon" (HID), que emitem uma luz branca-azulada intensa muito semelhante à luz do dia! Também é usado nas lâmpadas dos projetores de salas de cinema IMAX, em flashes estroboscópicos fotográficos, como anestésico médico moderno e como combustível dos propulsores iônicos que movem satélites e sondas espaciais da NASA.',
+        ['Faróis automotivos de Xenon (HID)', 'Projetores de salas de cinema', 'Propulsores iônicos de satélites espaciais']],
+      [55, 'Cs', 'Césio', '132.91', 2, 'Sólido', [2,8,18,18,8,1], 1, 6,
+        'O guardião oficial do tempo mundial! O segundo — unidade oficial de tempo do Sistema Internacional — é definido exatamente por 9.192.631.770 oscilações do átomo de Césio-133 nos relógios atômicos que sincronizam o horário dos celulares, bolsas de valores e satélites GPS. Também é usado em fluidos de perfuração de petróleo em águas profundas e células fotoelétricas.',
+        ['Relógios atômicos (hora oficial mundial e GPS)', 'Perfuração de poços profundos de petróleo', 'Tubos intensificadores de imagem médica']],
+      [56, 'Ba', 'Bário', '137.33', 3, 'Sólido', [2,8,18,18,8,2], 2, 6,
+        'Muito conhecido na medicina diagnóstica: o sulfato de bário é o líquido branco ("mingau de bário") ingerido por pacientes antes de exames de raio-X ou tomografia do estômago e intestino, pois bloqueia os raios X e destaca o aparelho digestivo com nitidez! Também é responsável pela cor verde vibrante nos fogos de artifício e usado em velas de ignição.',
+        ['Contraste para exames de Raio-X digestivo', 'Fogos de artifício de cor verde brilhante', 'Fluidos de perfuração de petróleo e tintas']],
+      [57, 'La', 'Lantânio', '138.91', 8, 'Sólido', [2,8,18,18,9,2], 4, 9,
+        'Primeiro elemento da série dos lantanídeos (terras raras). Está presente em grande quantidade nas baterias de carros híbridos (como o Toyota Prius), na "pedra" faiscante dos isqueiros comuns e acendedores de fogão (liga mischmetal) e nos vidros ópticos de altíssima qualidade das lentes de câmeras profissionais e celulares para evitar distorção das cores.',
+        ['Lentes de câmeras fotográficas e celulares', 'Pedra faiscante de isqueiros comuns', 'Baterias de carros híbridos']],
+      [58, 'Ce', 'Cério', '140.12', 8, 'Sólido', [2,8,18,19,9,2], 5, 9,
+        'A terra rara mais abundante! Toda vez que você risca a rodinha de um isqueiro comum, as faíscas vêm do cério (liga ferro-cério). Também está nas paredes internas dos fornos autolimpantes (atuando como catalisador que decompõe a gordura), nos catalisadores automotivos e como pó de óxido de cério usado por vidraceiros e ópticos para polir espelhos, para-brisas e lentes.',
+        ['Pedra de isqueiros e pederneiras de camping', 'Revestimento de fornos autolimpantes', 'Polimento de lentes de óculos e para-brisas']],
+      [59, 'Pr', 'Praseodímio', '140.91', 8, 'Sólido', [2,8,18,21,8,2], 6, 9,
+        'Essencial para os óculos de proteção amarelos usados por soldadores e sopradores de vidro, pois filtra o brilho amarelo intenso e a radiação infravermelha das chamas! Também é combinado ao neodímio nos ímãs superpotentes dos motores de carros elétricos e turbinas eólicas, além de dar uma cor amarelo-limão viva a cerâmicas, azulejos e cristais.',
+        ['Óculos de proteção para soldadores', 'Ímãs potentes de motores elétricos', 'Pigmento amarelo em azulejos e porcelanas']],
+      [60, 'Nd', 'Neodímio', '144.24', 8, 'Sólido', [2,8,18,22,8,2], 7, 9,
+        'Sem o neodímio, os fones de ouvido pequenos e potentes de hoje não existiriam! Ele forma os famosos "ímãs de neodímio" (NdFeB) — os ímãs permanentes mais fortes do mundo — presentes nos seus fones de ouvido Bluetooth, alto-falantes de celular, fechos magnéticos de capas/bolsas, discos rígidos (HD), motores de drones, carros elétricos e turbinas eólicas.',
+        ['Fones de ouvido e alto-falantes de celular', 'Ímãs superpotentes (fechos, brinquedos, HDs)', 'Motores de drones, carros elétricos e turbinas eólicas']],
+      [61, 'Pm', 'Promécio', '145', 8, 'Sintético', [2,8,18,23,8,2], 8, 9,
+        'O único lantanídeo radioativo que praticamente não ocorre na crosta terrestre, sendo produzido em reatores nucleares. Sua radiação beta suave e segura (que não atravessa nem uma folha de metal fino) foi usada em baterias nucleares miniaturizadas de longa duração para marca-passos cardíacos antigos, sondas espaciais, tintas luminosas de relógios de mergulho e medidores industriais de espessura de papel.',
+        ['Baterias nucleares para sondas espaciais', 'Medidores industriais de espessura de chapas', 'Tintas luminescentes especiais']],
+      [62, 'Sm', 'Samário', '150.36', 8, 'Sólido', [2,8,18,24,8,2], 9, 9,
+        'Forma os ímãs de Samário-Cobalto (SmCo), capazes de funcionar em temperaturas altíssimas (acima de 300°C) sem perder o magnetismo! Você o encontra nos captadores magnéticos de guitarras elétricas profissionais (como Fender), em pequenos motores de aeromodelismo, sensores automotivos, fones de ouvido de estúdio e no medicamento Samário-153 usado para aliviar dores ósseas em tratamentos oncológicos.',
+        ['Captadores de guitarras elétricas profissionais', 'Ímãs resistentes ao calor em motores e sensores', 'Radiofármacos para alívio de dor óssea']],
+      [63, 'Eu', 'Európio', '151.96', 8, 'Sólido', [2,8,18,25,8,2], 10, 9,
+        'Está escondido na sua carteira protegendo o seu dinheiro! Compostos de európio são impressos com tinta invisível nas cédulas de Euro e outras moedas modernas: sob luz negra (ultravioleta), brilham em vermelho e verde vivos para impedir falsificações. Também é o elemento responsável pelos pixels vermelhos e azuis brilhantes em telas e lâmpadas fluorescentes compactas.',
+        ['Tintas antifalsificação em cédulas de dinheiro', 'Fósforos vermelhos de telas e lâmpadas LED/fluorescentes', 'Detectores de radiação e lasers']],
+      [64, 'Gd', 'Gadolínio', '157.25', 8, 'Sólido', [2,8,18,25,9,2], 11, 9,
+        'Se você ou alguém da família já fez uma Ressonância Magnética "com contraste", recebeu um composto seguro de gadolínio na veia! Suas propriedades magnéticas únicas deixam vasos sanguíneos, inflamações e tecidos incrivelmente nítidos nas imagens médicas. Também é usado em ligas de blindagem nuclear e em pesquisas de geladeiras magnéticas ecológicas.',
+        ['Agente de contraste em exames de Ressonância Magnética', 'Sensores médicos de raios X e tomografia', 'Refrigeração magnética avançada']],
+      [65, 'Tb', 'Térbio', '158.93', 8, 'Sólido', [2,8,18,27,8,2], 12, 9,
+        'O mestre da luz verde brilhante! O térbio é o elemento essencial que gera a cor verde nas telas de TVs, monitores, smartphones e lâmpadas econômicas tricromáticas, além de brilhar em verde nas notas de dinheiro sob luz UV. Também compõe a liga "Terfenol-D", usada em sonares marítimos e em alto-falantes vibratórios ("SoundBugs") que transformam qualquer mesa ou janela em uma caixa de som.',
+        ['Pixels verdes de telas de TV e monitores', 'Tintas verdes antifalsificação sob luz UV', 'Atuadores acústicos e sonares navais']],
+      [66, 'Dy', 'Disprósio', '162.50', 8, 'Sólido', [2,8,18,28,8,2], 13, 9,
+        'Indispensável para os carros elétricos modernos e parques eólicos! Quando um motor elétrico trabalha pesado, ele esquenta e os ímãs de neodímio comuns perderiam força; adicionar disprósio garante que os ímãs mantenham potência total mesmo em altas temperaturas. Também é usado em lâmpadas de iluminação de sets de cinema e estádios.',
+        ['Motores de tração de carros elétricos e híbridos', 'Geradores de grandes turbinas eólicas', 'Refletores de iluminação cinematográfica']],
+      [67, 'Ho', 'Hólmio', '164.93', 8, 'Sólido', [2,8,18,29,8,2], 14, 9,
+        'Possui o maior momento magnético de qualquer elemento natural da Tabela Periódica! Por isso, é usado nas peças polares que concentram os campos magnéticos mais intensos em equipamentos científicos e de Ressonância Magnética. Na medicina cotidiana, o laser de Hólmio (Ho:YAG) é o padrão-ouro em hospitais para pulverizar pedras nos rins (cálculos renais) sem cirurgia aberta e tratar a próstata.',
+        ['Lasers médicos para quebrar pedras nos rins (litotripsia)', 'Cirurgias urológicas e oftalmológicas a laser', 'Concentradores de fluxo em superímãs']],
+      [68, 'Er', 'Érbio', '167.26', 8, 'Sólido', [2,8,18,30,8,2], 15, 9,
+        'O segredo por trás da internet mundial submarina! Cabos de fibra óptica que cruzam os oceanos usam "amplificadores ópticos dopados com érbio" (EDFA) a cada dezenas de quilômetros para reforçar o sinal de luz da internet sem precisar convertê-lo em eletricidade. Além disso, o óxido de érbio tem uma bela cor rosa natural usada para colorir óculos de sol e porcelanas, e lasers de érbio são usados por dermatologistas para rejuvenescimento da pele.',
+        ['Amplificadores da internet global de fibra óptica', 'Lasers dermatológicos (rejuvenescimento facial) e odontológicos', 'Coloração rosa em óculos e cristais']],
+      [69, 'Tm', 'Túlio', '168.93', 8, 'Sólido', [2,8,18,31,8,2], 16, 9,
+        'A mais rara das terras raras naturais estáveis! Apesar de raro, tem usos incríveis: aparelhos portáteis de raios X (usados por dentistas em domicílio, veterinários e inspeção de bagagens/peças) usam túlio como fonte compacta, e lasers cirúrgicos de túlio realizam cirurgias médicas de altíssima precisão com mínimo sangramento. Também brilha em azul nas cédulas de Euro sob luz UV.',
+        ['Aparelhos portáteis de Raios X médicos e industriais', 'Lasers cirúrgicos de alta precisão', 'Marcadores fluorescentes azuis em notas de dinheiro']],
+      [70, 'Yb', 'Itérbio', '173.05', 8, 'Sólido', [2,8,18,32,8,2], 17, 9,
+        'Detentor do recorde de precisão do tempo: os relógios atômicos ópticos de itérbio são tão precisos que não atrasariam nem 1 segundo em 15 bilhões de anos (a idade do universo)! No dia a dia industrial, lasers de fibra de itérbio são usados para cortar e gravar chapas de aço de carros e celulares com perfeição, além de ser adicionado ao aço inoxidável para aumentar sua resistência.',
+        ['Lasers industriais de corte e gravação metálica', 'Relógios atômicos ópticos mais precisos do mundo', 'Sensores de pressão sísmica e ligas de aço inox']],
+      [71, 'Lu', 'Lutécio', '174.97', 8, 'Sólido', [2,8,18,32,9,2], 18, 9,
+        'O último e mais denso elemento dos lantanídeos. Nos hospitais modernos, cristais de silicato de lutécio formam os sensores ultrarrápidos das máquinas de PET Scan (Tomografia por Emissão de Pósitrons), que detectam tumores precocemente. Além disso, o radiofármaco Lutécio-177 é uma terapia revolucionária alvo-direcionada usada para tratar cânceres neuroendócrinos e de próstata.',
+        ['Detectores de máquinas hospitalares de PET Scan', 'Terapia oncológica avançada (Lutécio-177)', 'Catalisadores no refino de gasolina em refinarias']],
+      [72, 'Hf', 'Háfnio', '178.49', 7, 'Sólido', [2,8,18,32,10,2], 4, 6,
+        'Está trabalhando agora mesmo dentro do processador do seu computador ou celular! Desde 2007, fabricantes como Intel, AMD e Apple usam óxido de háfnio como isolante microscópico nos bilhões de transistores dos chips modernos, evitando vazamento de energia e superaquecimento. Também é usado nos bicos de tochas de corte a plasma e em superligas de turbinas e foguetes.',
+        ['Microprocessadores modernos de PCs e smartphones', 'Bicos de corte a plasma em oficinas metalúrgicas', 'Barras de controle de reatores nucleares navais']],
+      [73, 'Ta', 'Tântalo', '180.95', 7, 'Sólido', [2,8,18,32,11,2], 5, 6,
+        'Um dos elementos mais presentes no seu bolso! Os "capacitores de tântalo" armazenam energia em espaço minúsculo dentro de quase todos os smartphones, notebooks, videogames e eletrônicos automotivos. Além disso, por ser totalmente imune aos ácidos do corpo e não causar rejeição, o tântalo é usado em placas cranianas, grampos cirúrgicos, marca-passos e implantes ortopédicos.',
+        ['Microcapacitores dentro de celulares e videogames', 'Implantes cirúrgicos, placas ósseas e marca-passos', 'Lentes de câmeras e ferramentas de metal duro']],
+      [74, 'W', 'Tungstênio', '183.84', 7, 'Sólido', [2,8,18,32,12,2], 6, 6,
+        'O metal com o maior ponto de fusão de toda a tabela periódica (só derrete a impressionantes 3.422 °C!). Por isso, formava o filamento brilhante das lâmpadas incandescentes clássicas. Hoje você o encontra na ponta esférica da sua caneta esferográfica (carbeto de tungstênio), em brocas de furadeira para furar concreto ("broca de vídea"), no motorzinho que faz seu celular vibrar e em alianças masculinas super-resistentes a riscos.',
+        ['Esfera da ponta de canetas esferográficas', 'Brocas de furadeira para parede/concreto (Vídea)', 'Alianças de tungstênio e vibracall de celulares']],
+      [75, 'Re', 'Rênio', '186.21', 7, 'Sólido', [2,8,18,32,13,2], 7, 6,
+        'Um dos elementos mais raros da crosta terrestre e o segundo com maior ponto de fusão! Quando você viaja de avião comercial, está voando graças ao rênio: ele é adicionado às superligas de níquel das pás das turbinas a jato para que suportem o calor infernal da câmara de combustão sem deformar. Também é usado nos catalisadores de refinarias para produzir gasolina de alta octanagem sem chumbo.',
+        ['Turbinas de aviões comerciais a jato', 'Produção de gasolina sem chumbo nas refinarias', 'Termopares de medição de altíssima temperatura']],
+      [76, 'Os', 'Ósmio', '190.23', 7, 'Sólido', [2,8,18,32,14,2], 8, 6,
+        'O elemento natural mais denso (pesado por volume) que existe na Terra: uma garrafa PET de 2 litros cheia de ósmio pesaria mais de 45 quilos! Por ser extremamente duro quando ligado à platina e ao irídio, é usado nas pontas eternas de canetas-tinteiro de luxo, em agulhas de toca-discos de vinil, pivôs de bússolas e relógios mecânicos, e na coloração de amostras biológicas para microscopia eletrônica.',
+        ['Pontas ultra-resistentes de canetas-tinteiro de luxo', 'Agulhas de toca-discos e pivôs de instrumentos', 'Microscopia eletrônica em laboratórios biológicos']],
+      [77, 'Ir', 'Irídio', '192.22', 7, 'Sólido', [2,8,18,32,15,2], 9, 6,
+        'O metal mais resistente à corrosão que existe (nem mesmo a água-régia o dissolve!) e abundante em meteoritos (foi uma camada de irídio no solo que provou a queda do asteroide que extinguiu os dinossauros). No dia a dia, você o encontra nas "velas de ignição de Irídio" de carros e motos modernas (que duram até 100.000 km), em cadinhos onde são cultivados os cristais de safira das telas de relógios/celulares e em contatos elétricos.',
+        ['Velas de ignição automotivas e de motos (Iridium)', 'Produção de cristais para lentes e telas de relógios', 'Pontas de bússolas e contatos elétricos aeroespaciais']],
+      [78, 'Pt', 'Platina', '195.08', 7, 'Sólido', [2,8,18,32,17,1], 10, 6,
+        'Símbolo máximo de prestígio e tecnologia! Além das cobiçadas alianças e joias de platina (que nunca oxidam nem perdem a cor), a platina está no catalisador do escapamento dos carros reduzindo a poluição, nos eletrodos de marca-passos cardíacos e cateteres médicos, em discos rígidos e como base de medicamentos quimioterápicos fundamentais (como a cisplatina e carboplatina) que salvam milhões de pacientes com câncer.',
+        ['Alianças e alta joalheria em Platina', 'Catalisadores automotivos antipoluição', 'Marca-passos cardíacos e medicamentos quimioterápicos']],
+      [79, 'Au', 'Ouro', '196.97', 7, 'Sólido', [2,8,18,32,18,1], 11, 6,
+        'O metal nobre mais famoso da história! Além de alianças, colares, relógios, medalhas olímpicas e barras de reserva financeira, o ouro não oxida jamais: por isso existe ouro dentro do seu smartphone, computador, cartão de crédito/débito (no chip dourado!) e cabos HDMI garantindo conexões elétricas perfeitas, além dos visores dos capacetes de astronautas que refletem a radiação solar.',
+        ['Alianças, joias, relógios e reserva de valor', 'Chip de cartões bancários, celulares e cabos HDMI', 'Visores de astronautas e testes rápidos de farmácia']],
+      [80, 'Hg', 'Mercúrio', '200.59', 7, 'Líquido', [2,8,18,32,18,2], 12, 6,
+        'O único metal que é líquido e prateado em temperatura ambiente! Historicamente famoso nos termômetros clínicos de vidro, aparelhos de pressão arterial de coluna, amálgamas de obturações dentárias prateadas e no vapor interno de lâmpadas fluorescentes e econômicas. Devido à sua toxicidade ambiental, hoje vem sendo substituído por LEDs e termômetros digitais ou de gálio.',
+        ['Lâmpadas fluorescentes tubulares e de vapor', 'Termômetros e barômetros científicos clássicos', 'Interruptores de inclinação e amálgamas antigos']],
+      [81, 'Tl', 'Tálio', '204.38', 6, 'Sólido', [2,8,18,32,18,3], 13, 6,
+        'Metal pós-transição macio cujos compostos exigem manuseio estritamente controlado. Na medicina e na ciência cotidiana, pequenas doses seguras do isótopo Tálio-201 são usadas em exames cardíacos de esforço (cintilografia do miocárdio) para verificar a circulação sanguínea no coração, além de compor cristais detectores de radiação em scanners de segurança de aeroportos e lentes infravermelhas.',
+        ['Exames cardiológicos de estresse (Tálio-201)', 'Detectores de raios gama em scanners de aeroportos', 'Vidros ópticos especiais de baixo ponto de fusão']],
+      [82, 'Pb', 'Chumbo', '207.2', 6, 'Sólido', [2,8,18,32,18,4], 14, 6,
+        'Metal denso, macio e excelente bloqueador de radiação! Está presente sob o capô de quase todos os carros na bateria de 12V (bateria de chumbo-ácido). Quando você tira uma radiografia no dentista ou no hospital, aquele colete pesado que colocam sobre seu peito e pescoço contém placas de chumbo para proteger seus órgãos dos raios X. Também é usado em pesos de mergulho e equilibradores de rodas.',
+        ['Baterias automotivas de 12V (chumbo-ácido)', 'Aventais e paredes de proteção em salas de Raio-X', 'Chumbadas de pesca e pesos de mergulho']],
+      [83, 'Bi', 'Bismuto', '208.98', 6, 'Sólido', [2,8,18,32,18,5], 15, 6,
+        'Um metal pesado surpreendentemente seguro e colorido! Ao se solidificar, forma cristais em degraus com todas as cores do arco-íris (muito vendidos em lojas de minerais e decoração). No cotidiano está em medicamentos estomacais famosos contra azia e má digestão (subsalicilato de bismuto), no brilho perolado de batons, sombras de maquiagem e esmaltes de unha (oxicloreto de bismuto), e em soldas ecológicas sem chumbo.',
+        ['Maquiagens peroladas (batons, sombras e esmaltes)', 'Medicamentos para azia e proteção gástrica', 'Cristais arco-íris decorativos e sprinklers de incêndio']],
+      [84, 'Po', 'Polônio', '209', 6, 'Sólido', [2,8,18,32,18,6], 16, 6,
+        'Descoberto pelo casal Marie e Pierre Curie em 1898 (batizado em homenagem à Polônia, terra natal de Marie). Na natureza aparece em quantidades microscópicas em minérios de urânio e na fumaça do tabaco. Na indústria, é usado em pincéis e barras antiestáticas para eliminar a eletricidade estática que atrai poeira em fábricas de películas fotográficas, papel, plásticos e lentes ópticas.',
+        ['Escovas antiestáticas industriais e fotográficas', 'Fontes térmicas para equipamentos espaciais (rovers)', 'Pesquisa histórica da radioatividade (Marie Curie)']],
+      [85, 'At', 'Astato', '210', 5, 'Sólido', [2,8,18,32,18,7], 17, 6,
+        'O elemento natural mais raro de toda a crosta terrestre: estima-se que exista menos de 1 grama de astato natural em todo o planeta Terra a qualquer momento (formado pelo decaimento do urânio e tório)! Na medicina avançada, o isótopo Astato-211 (produzido em cíclotrons hospitalares) é pesquisado e aplicado em alfa-terapia alvo-direcionada para destruir micrometástases de câncer sem afetar células vizinhas.',
+        ['Radioimunoterapia avançada contra o câncer (At-211)', 'Pesquisa em aceleradores de partículas médicos', 'Traços ultrarraros em minérios de urânio']],
+      [86, 'Rn', 'Radônio', '222', 1, 'Gasoso', [2,8,18,32,18,8], 18, 6,
+        'Gás nobre radioativo, incolor e inodoro que se forma naturalmente no subsolo a partir do decaimento do rádio e urânio presentes em rochas como o granito. No cotidiano da engenharia civil e saúde ambiental, medidores de radônio são usados em porões, minas subterrâneas e túneis para garantir boa ventilação, e variações na sua emissão no solo são monitoradas por geólogos para estudar atividades sísmicas e vulcânicas.',
+        ['Emanação natural de rochas graníticas e solos', 'Monitoramento geológico de falhas sísmicas e vulcões', 'Controle de qualidade do ar em porões e minas']],
+      [87, 'Fr', 'Frâncio', '223', 2, 'Sólido', [2,8,18,32,18,8,1], 1, 7,
+        'O segundo elemento mais raro da crosta terrestre (existem apenas cerca de 20 a 30 gramas em toda a Terra a cada instante!) e o metal mais eletropositivo. Como sua meia-vida máxima é de apenas 22 minutos, não possui aplicações comerciais domésticas, sendo produzido em laboratórios de física atômica para estudar a estrutura quântica das camadas eletrônicas e forças fundamentais da natureza.',
+        ['Experimentos de física quântica e espectroscopia a laser', 'Traços efêmeros em minerais de urânio e tório', 'Laboratórios de pesquisa nuclear avançada']],
+      [88, 'Ra', 'Rádio', '226', 3, 'Sólido', [2,8,18,32,18,8,2], 2, 7,
+        'Outro marco histórico de Marie Curie, que brilha com uma suave luminescência azulada no escuro! No passado foi usado em tintas que brilhavam no escuro em ponteiros de relógios e painéis de avião. Hoje, na medicina moderna de precisão, o cloreto de Rádio-223 é um medicamento aprovado e utilizado em hospitais para tratar pacientes com câncer de próstata com metástase óssea, pois o corpo o absorve exatamente onde o osso precisa de defesa.',
+        ['Tratamento oncológico ósseo moderno (Rádio-223)', 'Relógios luminescentes históricos de colecionador', 'Descoberta histórica da radioterapia']],
+      [89, 'Ac', 'Actínio', '227', 9, 'Sólido', [2,8,18,32,18,9,2], 4, 10,
+        'Primeiro elemento da série dos actinídeos (cujo nome vem do grego "aktis", que significa raio/feixe de luz, pois brilha em azul pálido no escuro). Na medicina contemporânea, o Actínio-225 é considerado uma das maiores revoluções da oncologia nuclear (Terapia Alfa Alvo), sendo acoplado a anticorpos que viajam pelo sangue e destroem seletivamente células de tumores resistentes.',
+        ['Terapias oncológicas de última geração (Actínio-225)', 'Fontes de nêutrons para análise de materiais', 'Geradores termoelétricos científicos']],
+      [90, 'Th', 'Tório', '232.04', 9, 'Sólido', [2,8,18,32,18,10,2], 5, 10,
+        'Batizado em homenagem a Thor, o deus nórdico do trovão! O Brasil possui algumas das maiores reservas de tório do mundo (nas areias monazíticas do litoral do Espírito Santo, Rio de Janeiro e Bahia). Foi muito usado nas "camisinhas" incandescentes de lampiões a gás de acampamento, em lentes de câmeras antigas, eletrodos de solda TIG e hoje é estudado como o combustível nuclear mais seguro e abundante do futuro.',
+        ['Areias monazíticas de praias brasileiras (ES/RJ/BA)', 'Eletrodos de tungstênio-tório para soldagem TIG', 'Reatores nucleares de energia limpa de nova geração']],
+      [91, 'Pa', 'Protactínio', '231.04', 9, 'Sólido', [2,8,18,32,20,9,2], 6, 10,
+        'Seu nome significa "pai do actínio", pois decai diretamente nele. É um elemento extremamente raro e denso encontrado em pequenas frações no minério de urânio (pechblenda). No cotidiano científico, geocientistas e oceanógrafos medem a proporção entre Protactínio-231 e Tório-230 em sedimentos do fundo do mar e geleiras para datar o clima da Terra nos últimos 200 mil anos e entender as correntes oceânicas.',
+        ['Datação geocronológica de sedimentos oceânicos', 'Estudos sobre a história climática e eras glaciais da Terra', 'Minérios naturais de urânio (pechblenda)']],
+      [92, 'U', 'Urânio', '238.03', 9, 'Sólido', [2,8,18,32,21,9,2], 7, 10,
+        'A principal fonte da energia nuclear que ilumina grandes cidades sem emitir fumaça de carbono! No Brasil, o urânio extraído em Caetité (BA) abastece as usinas nucleares de Angra 1 e Angra 2 (RJ), que geram eletricidade para milhões de lares brasileiros. Apenas 1 pastilha de urânio do tamanho da ponta do dedo gera a mesma energia que 1 tonelada de carvão! Também foi usado historicamente para fazer o belo "vidro de urânio" que brilha em verde-neon sob luz UV.',
+        ['Geração de eletricidade nas Usinas de Angra 1 e 2', 'Peças antigas de Vidro de Urânio (brilho verde UV)', 'Datação Urânio-Chumbo da idade da Terra (4,5 bi de anos)']],
+      [93, 'Np', 'Netúnio', '237', 9, 'Sintético', [2,8,18,32,22,9,2], 8, 10,
+        'Batizado em homenagem ao planeta Netuno (logo após Urano/Urânio no Sistema Solar). Foi o primeiro elemento transurânico sintético descoberto (1940). Embora seja produzido principalmente em reatores nucleares, o Netúnio-237 é matéria-prima indispensável para fabricar o Plutônio-238 que alimenta a bateria das sondas espaciais da NASA (como as Voyagers e os rovers de Marte), além de ser usado em detectores de nêutrons de alta energia.',
+        ['Matéria-prima para baterias de sondas espaciais da NASA', 'Detectores científicos de nêutrons de alta energia', 'Subproduto controlado em reatores de energia nuclear']],
+      [94, 'Pu', 'Plutônio', '244', 9, 'Sintético', [2,8,18,32,24,8,2], 9, 10,
+        'Batizado em homenagem a Plutão. Além de seu papel histórico na era atômica e geração de energia em usinas nucleares, o isótopo Plutônio-238 emite calor constante por décadas sem precisar de luz solar: é a "bateria nuclear" (RTG) que mantém funcionando os robôs Curiosity e Perseverance em Marte, a sonda New Horizons que fotografou Plutão e as lendárias sondas Voyager 1 e 2 no espaço interestelar!',
+        ['Bateria nuclear dos robôs Perseverance e Curiosity em Marte', 'Fonte de energia das sondas Voyager 1 e 2 no espaço', 'Combustível de usinas nucleares (MOX)']],
+      [95, 'Am', 'Amerício', '243', 9, 'Sintético', [2,8,18,32,25,8,2], 10, 10,
+        'O único elemento sintético (criado pelo ser humano) que pode estar no teto de casas, hotéis, escritórios e escolas agora mesmo! Uma quantidade microscópica (menos de 1 micrograma) de Amerício-241 é o coração dos detectores de fumaça por ionização: ele cria uma minúscula corrente elétrica no ar interno do aparelho; se entrar fumaça de incêndio, a corrente é interrompida e o alarme dispara salvando vidas!',
+        ['Detectores de fumaça em hotéis, prédios e residências', 'Medidores industriais de espessura de vidro plano', ' Sensores de nível de fluido na indústria']],
+      [96, 'Cm', 'Cúrio', '247', 9, 'Sintético', [2,8,18,32,25,9,2], 11, 10,
+        'Homenagem dupla a Marie e Pierre Curie! É um metal radioativo tão energético que brilha em tom roxo-avermelhado no escuro e é quente ao toque. Sua principal aplicação prática ocorreu na exploração do Sistema Solar: o Cúrio-244 foi instalado nos espectrômetros de raios X (APXS) dos robôs espaciais Sojourner, Spirit, Opportunity, Curiosity e no módulo Philae para analisar a composição química das rochas de Marte e de cometas!',
+        ['Analisadores químicos de rochas nos rovers de Marte', 'Missão Rosetta/Philae de pouso em cometa', 'Pesquisa de transmutação de resíduos nucleares']],
+      [97, 'Bk', 'Berquélio', '247', 9, 'Sintético', [2,8,18,32,27,8,2], 12, 10,
+        'Batizado em homenagem à cidade universitária de Berkeley (Califórnia), berço da descoberta de vários elementos da tabela periódica. Produzido em quantidades de miligramas em reatores de alto fluxo, o Berquélio-249 foi o "ingrediente-chave" bombardeado por cientistas para descobrir o elemento 117 (Tennesso), completando a 7ª linha da Tabela Periódica!',
+        ['Síntese de novos elementos superpesados (como o Tennesso)', 'Pesquisa fundamental em química de actinídeos', 'Reatores científicos de alto fluxo (Oak Ridge)']],
+      [98, 'Cf', 'Califórnio', '251', 9, 'Sintético', [2,8,18,32,28,8,2], 13, 10,
+        'Um emissor de nêutrons incrivelmente potente! Um único micrograma de Califórnio-252 emite 170 milhões de nêutrons por minuto. Graças a isso, tem aplicações reais importantes: é usado para dar a "partida inicial" em reatores nucleares de usinas, em equipamentos portáteis de aeroportos e defesa para detectar explosivos ou contrabando sem abrir malas, para localizar camadas de petróleo e água em poços profundos e em radioterapia contra tumores cerebrais e cervicais resistentes.',
+        ['Scanners de segurança para detecção de explosivos', 'Partida (ignição) de usinas de energia nuclear', 'Prospecção de petróleo, ouro e carvão no subsolo']],
+      [99, 'Es', 'Einstênio', '252', 9, 'Sintético', [2,8,18,32,29,8,2], 14, 10,
+        'Homenagem ao grande físico Albert Einstein! Descoberto em 1952 após a análise de detritos do primeiro teste termonuclear no Pacífico. É o elemento mais pesado que já foi produzido em quantidade visível a olho nu (em microgramas), sendo utilizado em laboratórios de ponta para estudar os efeitos da relatividade de Einstein sobre os elétrons de átomos muito pesados e para criar o elemento Mendelévio.',
+        ['Estudos sobre efeitos relativísticos em elétrons', 'Calibração do espectrômetro da sonda lunar Surveyor 5', 'Síntese do elemento Mendelévio em laboratório']],
+      [100, 'Fm', 'Férmio', '257', 9, 'Sintético', [2,8,18,32,30,8,2], 15, 10,
+        'Batizado em homenagem a Enrico Fermi, pioneiro da física nuclear e criador do primeiro reator nuclear da história. O férmio é o elemento mais pesado que pode ser produzido pelo bombardeio de nêutrons sobre elementos mais leves; a partir do Z=101, é obrigatório usar aceleradores de partículas. É utilizado exclusivamente em pesquisas de física nuclear e química atômica.',
+        ['Pesquisa sobre limites de captura de nêutrons', 'Estudos da estabilidade nuclear em laboratórios', 'Homenagem histórica a Enrico Fermi']],
+      [101, 'Md', 'Mendelévio', '258', 9, 'Sintético', [2,8,18,32,31,8,2], 16, 10,
+        'Homenagem merecidíssima a Dmitri Mendeleev, o químico russo que criou a Tabela Periódica em 1869 e previu elementos que ainda nem haviam sido descobertos! Foi o primeiro elemento da história produzido e identificado "átomo por átomo" (17 átomos na primeira experiência em 1955) em um acelerador cíclotron, sendo usado em estudos de química de soluções aquosas de actinídeos pesados.',
+        ['Homenagem a Dmitri Mendeleev (criador da Tabela Periódica)', 'Estudos de oxidação e raio iônico em aceleradores', 'Pioneiro na identificação química átomo por átomo']],
+      [102, 'No', 'Nobélio', '259', 9, 'Sintético', [2,8,18,32,32,8,2], 17, 10,
+        'Batizado em homenagem a Alfred Nobel, inventor da dinamite e instituidor do Prêmio Nobel da ciência e da paz. Sintetizado em aceleradores de partículas (como em Dubna e Berkeley), o nobélio surpreendeu os químicos por preferir perder apenas 2 elétrons (estado +2) em vez de 3 como os demais actinídeos, devido à sua camada 5f totalmente preenchida com 14 elétrons!',
+        ['Homenagem a Alfred Nobel (criador do Prêmio Nobel)', 'Pesquisa sobre preenchimento completo da camada 5f', 'Experimentos em aceleradores de íons pesados']],
+      [103, 'Lr', 'Laurêncio', '266', 9, 'Sintético', [2,8,18,32,32,8,3], 18, 10,
+        'Último elemento da série dos actinídeos, batizado em homenagem a Ernest O. Lawrence, inventor do acelerador de partículas Cíclotron (Prêmio Nobel de Física de 1939). Em 2015, cientistas conseguiram medir experimentalmente sua energia de ionização usando apenas alguns átomos por vez, confirmando como os efeitos relativísticos alteram sua camada de valência.',
+        ['Homenagem ao inventor do Cíclotron (usado em hospitais)', 'Fechamento do bloco f da Tabela Periódica', 'Medições quânticas de átomos individuais']],
+      [104, 'Rf', 'Rutherfórdio', '267', 7, 'Sintético', [2,8,18,32,32,10,2], 4, 7,
+        'Primeiro elemento "superpesado" (transactinídeo), batizado em homenagem a Ernest Rutherford — o físico que descobriu o núcleo atômico e criou o modelo planetário do átomo que você está visualizando em 3D! Produzido em aceleradores de partículas, confirma que na 7ª linha os elementos voltam a se comportar como metais de transição (semelhante ao zircônio e háfnio).',
+        ['Homenagem a Ernest Rutherford (pai do modelo nuclear)', 'Pesquisa química em fase gasosa de superpesados', 'Aceleradores de partículas (GSI, Dubna, Berkeley)']],
+      [105, 'Db', 'Dúbnio', '268', 7, 'Sintético', [2,8,18,32,32,11,2], 5, 7,
+        'Batizado em homenagem à cidade científica de Dubna, na Rússia (sede do Instituto Conjunto de Pesquisa Nuclear - JINR), um dos maiores centros mundiais de descoberta de novos elementos químicos. Na tabela periódica está exatamente abaixo do Nióbio e do Tântalo, sendo estudado átomo por átomo para investigar propriedades químicas extremas.',
+        ['Centro de Pesquisa Nuclear de Dubna (JINR)', 'Estudos comparativos com o Nióbio e o Tântalo', 'Física de fusão nuclear a frio e a quente']],
+      [106, 'Sg', 'Seabórgio', '269', 7, 'Sintético', [2,8,18,32,32,12,2], 6, 7,
+        'Batizado em homenagem ao químico americano Glenn T. Seaborg (Prêmio Nobel de 1951), co-descobridor de 10 elementos da tabela periódica (incluindo o plutônio e o amerício) e responsável por posicionar os actinídeos abaixo dos lantanídeos. Foi a primeira vez na história que um elemento recebeu o nome de um cientista ainda vivo na época!',
+        ['Homenagem a Glenn Seaborg (arquiteto da tabela moderna)', 'Experimentos com hexacarbonil de seabórgio em laboratório', 'Química experimental de metais do Grupo 6']],
+      [107, 'Bh', 'Bóhrio', '270', 7, 'Sintético', [2,8,18,32,32,13,2], 7, 7,
+        'Batizado em homenagem ao físico dinamarquês Niels Bohr — criador do famoso Modelo Atômico de Bohr das camadas eletrônicas (K, L, M, N, O, P, Q) que você vê neste simulador! Sintetizado pela primeira vez no laboratório GSI na Alemanha em 1981, tem propriedades químicas semelhantes às do Rênio.',
+        ['Homenagem a Niels Bohr (criador do modelo de camadas)', 'Síntese por fusão de bismuto e cromo no laboratório GSI', 'Estudos de volatilidade de oxicloretos superpesados']],
+      [108, 'Hs', 'Hássio', '277', 7, 'Sintético', [2,8,18,32,32,14,2], 8, 7,
+        'Seu nome vem de "Hassia", nome em latim do estado alemão de Hesse, onde fica a cidade de Darmstadt e o famoso centro de aceleradores GSI Helmholtz. Situado logo abaixo do Ósmio no grupo 8, cientistas conseguiram reagir átomos individuais de hássio com oxigênio para formar tetróxido de hássio gasoso!',
+        ['Laboratório GSI Helmholtz em Darmstadt (Alemanha)', 'Formação de moléculas de tetróxido com apenas 7 átomos', 'Estudos de estabilidade de camadas nucleares deformadas']],
+      [109, 'Mt', 'Meitnério', '278', 7, 'Sintético', [2,8,18,32,32,15,2], 9, 7,
+        'Homenagem histórica à brilhante física austríaca Lise Meitner, que em 1938 explicou teoricamente pela primeira vez o processo de fissão nuclear (que deu origem à energia nuclear moderna). É um dos raros elementos batizados em homenagem a uma mulher cientista (ao lado do Cúrio), sendo produzido e estudado em aceleradores de íons pesados.',
+        ['Homenagem a Lise Meitner (pioneira da fissão nuclear)', 'Pesquisa em física nuclear de elementos superpesados', 'Síntese em aceleradores lineares de partículas']],
+      [110, 'Ds', 'Darmstádio', '281', 7, 'Sintético', [2,8,18,32,32,17,1], 10, 7,
+        'Batizado em homenagem à cidade de Darmstadt, na Alemanha, onde foram descobertos seis elementos químicos (107 a 112). Posicionado exatamente abaixo da Platina (Grupo 10), cálculos quânticos indicam que o darmstádio seria um metal nobre ainda mais denso e inerte que a própria platina e o ouro.',
+        ['Descoberto em Darmstadt (Alemanha) em 1994', 'Homólogo superpesado da Platina e do Paládio', 'Estudos teóricos de química quântica relativística']],
+      [111, 'Rg', 'Roentgênio', '282', 7, 'Sintético', [2,8,18,32,32,18,1], 11, 7,
+        'Batizado em homenagem a Wilhelm Conrad Röntgen, o físico alemão que descobriu os Raios X em 1895 (e ganhou o primeiro Prêmio Nobel de Física da história em 1901). Fica na mesma coluna do Cobre, Prata e Ouro (Grupo 11), sendo estudado para entender como a velocidade próxima à da luz dos elétrons internos altera os metais preciosos.',
+        ['Homenagem a Wilhelm Röntgen (descobridor dos Raios X)', 'Grupo dos metais de cunhagem (Cobre, Prata e Ouro)', 'Física atômica relativística em aceleradores']],
+      [112, 'Cn', 'Copernício', '285', 7, 'Sintético', [2,8,18,32,32,18,2], 12, 7,
+        'Homenagem ao astrônomo Nicolau Copérnico, que mostrou que a Terra e os planetas giram ao redor do Sol — inspiração direta para o modelo planetário dos elétrons girando ao redor do núcleo! Situado abaixo do Mercúrio (Grupo 12), experimentos recentes mostram que o copernício é tão volátil que pode ser um metal líquido ou até gasoso em temperatura ambiente!',
+        ['Homenagem a Nicolau Copérnico (heliocentrismo)', 'Primeiro metal possivelmente gasoso à temperatura ambiente', 'Experimentos de adsorção em superfícies de ouro']],
+      [113, 'Nh', 'Nihônio', '286', 6, 'Sintético', [2,8,18,32,32,18,3], 13, 7,
+        'O primeiro elemento da Tabela Periódica descoberto no continente asiático! Seu nome vem de "Nihon" (Japão, a "Terra do Sol Nascente"), sintetizado pela equipe do centro RIKEN após 9 anos bombardeando bismuto com íons de zinco em um acelerador de partículas.',
+        ['Primeiro elemento descoberto na Ásia (Instituto RIKEN, Japão)', 'Homenagem ao Japão ("Nihon")', 'Pesquisa da fronteira do bloco p da Tabela Periódica']],
+      [114, 'Fl', 'Fleróvio', '289', 6, 'Sintético', [2,8,18,32,32,18,4], 14, 7,
+        'Batizado em homenagem ao Laboratório Flerov de Reações Nucleares (e ao físico soviético Georgy Flyorov). Fica abaixo do Chumbo (Grupo 14) e está no centro das pesquisas sobre a famosa "Ilha de Estabilidade" nuclear — uma região prevista pela física onde núcleos superpesados com cerca de 184 nêutrons poderiam durar muito mais tempo.',
+        ['Busca pela "Ilha de Estabilidade" da física nuclear', 'Homólogo superpesado do Chumbo e Estanho', 'Experimentos de cromatografia gasosa atômica']],
+      [115, 'Mc', 'Moscóvio', '290', 6, 'Sintético', [2,8,18,32,32,18,5], 15, 7,
+        'Batizado em 2016 em homenagem à região de Moscou (Rússia), onde fica o instituto de pesquisa de Dubna que o sintetizou em colaboração com cientistas americanos do laboratório Lawrence Livermore e Oak Ridge. Fica exatamente abaixo do Bismuto na coluna 15 da tabela.',
+        ['Descoberta conjunta Rússia-EUA (Dubna e Livermore)', 'Cadeias de decaimento alfa para criar o Nihônio', 'Estudos de estrutura nuclear superpesada']],
+      [116, 'Lv', 'Livermório', '293', 6, 'Sintético', [2,8,18,32,32,18,6], 16, 7,
+        'Batizado em homenagem ao Laboratório Nacional Lawrence Livermore (na cidade de Livermore, Califórnia), parceiro fundamental na descoberta dos elementos 113 a 118. Posicionado abaixo do Polônio (Grupo 16, família dos calcogênios), foi criado bombardeando átomos de Cúrio-248 com íons de Cálcio-48.',
+        ['Laboratório Nacional Lawrence Livermore (Califórnia)', 'Fusão nuclear com feixes de Cálcio-48', 'Estudo dos calcogênios superpesados (Grupo 16)']],
+      [117, 'Ts', 'Tennesso', '294', 5, 'Sintético', [2,8,18,32,32,18,7], 17, 7,
+        'Homenagem ao estado do Tennessee (EUA), lar do Laboratório Nacional de Oak Ridge e da Universidade Vanderbilt, que produziram os preciosos 22 miligramas de Berquélio necessários para criar este elemento em 2010! Fica na coluna dos Halogênios (abaixo do Flúor, Cloro, Bromo, Iodo e Astato).',
+        ['Homenagem aos centros científicos do Tennessee (Oak Ridge)', 'O halogênio mais pesado já criado pela ciência', 'Penúltimo elemento da Tabela Periódica atual']],
+      [118, 'Og', 'Oganessônio', '294', 1, 'Sintético', [2,8,18,32,32,18,8], 18, 7,
+        'O elemento de maior número atômico conhecido pela humanidade (Z = 118, com 118 prótons e 118 elétrons distribuídos em todas as 7 camadas completas: 2, 8, 18, 32, 32, 18, 8)! Batizado em homenagem ao físico nuclear Yuri Oganessian (líder na descoberta dos elementos superpesados), fecha com chave de ouro o 7º período e a coluna dos Gases Nobres.',
+        ['Elemento mais pesado já criado pela ciência (Z = 118)', 'Homenagem ao físico vivo Yuri Oganessian', 'Camadas K a Q completas (2-8-18-32-32-18-8)']]
+    ];
+
+    // Processar todos os 118 elementos em objetos ricos
+    const ELEMENTS = RAW_ELEMENTS.map(item => {
+      const z = item[0];
+      const massNum = Math.round(parseFloat(item[3]));
+      const neutrons = Math.max(0, massNum - z);
+      return {
+        z: z,
+        symbol: item[1],
+        name: item[2],
+        mass: item[3],
+        catId: item[4],
+        category: CATEGORIES[item[4]],
+        state: item[5],
+        shells: item[6],
+        col: item[7],
+        row: item[8],
+        protons: z,
+        neutrons: neutrons,
+        electrons: z,
+        cotidiano: item[9],
+        exemplos: item[10],
+        subshells: computeSubshells(z, item[6])
+      };
+    });
+
+    // Gerador preciso da Configuração Eletrônica por Subníveis (1s² 2s²...) a partir das camadas reais (K..Q)
+    function computeSubshells(z, shells) {
+      const sup = ['⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹','¹⁰','¹¹','¹²','¹³','¹⁴'];
+      const toSup = (n) => n <= 14 ? sup[n] : String(n);
+      // Capacidades máximas de s, p, d, f por nível principal n (1..7)
+      // Para cada camada n (índice 0..6), distribuir os elétrons reais de shells[n-1] na ordem s -> f -> d -> p
+      // (Como nos níveis internos f e d são preenchidos conforme shells[i] cresce além de 8 e 18)
+      const parts = [];
+      for (let i = 0; i < shells.length; i++) {
+        const n = i + 1;
+        let rem = shells[i];
+        if (rem <= 0) continue;
+
+        // s (máx 2)
+        const s = Math.min(2, rem);
+        rem -= s;
+        let p = 0, d = 0, f = 0;
+
+        if (rem > 0) {
+          // Se esta é a camada mais externa ou tem <= 6 restantes, vai para p (exceto Pd Z=46 onde M tem 18 -> s2 p6 d10)
+          if (n >= 4 && rem > 16) {
+            p = 6;
+            d = 10;
+            f = rem - 16;
+          } else if (n >= 3 && rem > 6) {
+            // Verificar se tem f antes de d completo (ex: Lantanídeos na camada N=4 têm s2 p6 d(0..1) f(1..14))
+            if (n >= 4 && ((z >= 58 && z <= 70 && n === 4) || (z >= 90 && z <= 102 && n === 5))) {
+              p = 6;
+              const left = rem - 6;
+              // Ce(58), Gd(64), Th(90), Pa(91), U(92), Np(93), Cm(96) têm 1 ou 2 em d
+              let dCount = 0;
+              if (z === 58 || z === 64 || z === 91 || z === 92 || z === 93 || z === 96) dCount = 1;
+              if (z === 90) dCount = 2;
+              d = Math.min(dCount, left);
+              f = left - d;
+            } else {
+              p = Math.min(6, rem);
+              d = rem - p;
+            }
+          } else {
+            p = Math.min(6, rem);
+          }
+        }
+
+        if (s > 0) parts.push(`${n}s${toSup(s)}`);
+        if (f > 0) parts.push(`${n}f${toSup(f)}`);
+        if (d > 0) parts.push(`${n}d${toSup(d)}`);
+        if (p > 0) parts.push(`${n}p${toSup(p)}`);
+      }
+      return parts.join(' ');
+    }
+
+    // =========================================================================
+    // 3. ESTADO GLOBAL DA APLICAÇÃO
+    // =========================================================================
+    const appState = {
+      selectedElement: ELEMENTS[5], // Carbono (Z=6) inicial
+      activeCategory: null,         // null = Todos
+      searchQuery: '',
+      layoutMode: 'table',          // 'table' | 'sphere' | 'helix' | 'grid'
+      isModalOpen: false,
+      // Configurações do Visualizador Atômico 3D
+      atomMode: 'bohr',             // 'bohr' | 'rutherford'
+      atomSpeed: 1.0,
+      atomShowRings: true,
+      atomPaused: false
+    };
+
+    // =========================================================================
+    // 4. CENA 1: TABELA PERIÓDICA 3D (THREE.JS)
+    // =========================================================================
+    let tScene, tCamera, tRenderer, tControls, tRaycaster, tMouse;
+    let cardMeshes = [];
+    let targets = { table: [], sphere: [], helix: [], grid: [] };
+    let hoveredCard = null;
+    let tStarField;
+
+    // Cria textura Canvas nítida de alta resolução para cada cartão de elemento 3D
+    function createElementCardTexture(el, isHighlighted = true) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 300;
+      const ctx = canvas.getContext('2d');
+
+      const [r, g, b] = el.category.rgb;
+
+      // Fundo escuro translúcido com gradiente da família química
+      const grad = ctx.createLinearGradient(0, 0, 256, 300);
+      grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.28)`);
+      grad.addColorStop(0.5, 'rgba(9, 14, 28, 0.94)');
+      grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.42)`);
+
+      // Desenhar retângulo arredondado
+      ctx.fillStyle = grad;
+      roundRect(ctx, 6, 6, 244, 288, 24);
+      ctx.fill();
+
+      // Borda neon da categoria
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = el.category.hex;
+      ctx.stroke();
+
+      // Barra de brilho superior
+      ctx.fillStyle = el.category.hex;
+      roundRect(ctx, 26, 16, 204, 5, 3);
+      ctx.fill();
+
+      // Número Atômico (Z) no topo esquerdo
+      ctx.fillStyle = el.category.hex;
+      ctx.font = 'bold 34px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(String(el.z), 24, 62);
+
+      // Massa Atômica no topo direito
+      ctx.fillStyle = 'rgba(203, 213, 225, 0.85)';
+      ctx.font = '600 22px "JetBrains Mono", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(el.mass, 232, 58);
+
+      // Símbolo Químico Grande no Centro
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 96px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = el.category.hex;
+      ctx.shadowBlur = 16;
+      ctx.fillText(el.symbol, 128, 166);
+      ctx.shadowBlur = 0;
+
+      // Nome do Elemento em Português
+      ctx.fillStyle = '#f1f5f9';
+      ctx.font = '700 25px "Inter", sans-serif';
+      ctx.fillText(el.name, 128, 216);
+
+      // Camadas Eletrônicas resumidas na base do cartão
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.95)';
+      ctx.font = '600 18px "JetBrains Mono", monospace';
+      ctx.fillText(el.shells.join(' · '), 128, 256);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = 4;
+      return texture;
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function initPeriodicTable3D() {
+      const container = document.getElementById('table-canvas-container');
+
+      tScene = new THREE.Scene();
+      tScene.fog = new THREE.FogExp2(0x020617, 0.0045);
+
+      tCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 400);
+      setResponsiveTableCamera();
+
+      tRenderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      tRenderer.setSize(window.innerWidth, window.innerHeight);
+      tRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(tRenderer.domElement);
+
+      tControls = new THREE.OrbitControls(tCamera, tRenderer.domElement);
+      tControls.enableDamping = true;
+      tControls.dampingFactor = 0.07;
+      tControls.minDistance = 12;
+      tControls.maxDistance = 160;
+      tControls.maxPolarAngle = Math.PI * 0.85;
+
+      tRaycaster = new THREE.Raycaster();
+      tMouse = new THREE.Vector2(-999, -999);
+
+      // Iluminação ambiente e pontual
+      const ambLight = new THREE.AmbientLight(0xffffff, 0.95);
+      tScene.add(ambLight);
+
+      const dirLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
+      dirLight.position.set(20, 40, 50);
+      tScene.add(dirLight);
+
+      // Partículas estelares de fundo
+      const starGeo = new THREE.BufferGeometry();
+      const starCount = 700;
+      const starPos = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount * 3; i += 3) {
+        starPos[i] = (Math.random() - 0.5) * 260;
+        starPos[i + 1] = (Math.random() - 0.5) * 180;
+        starPos[i + 2] = (Math.random() - 0.5) * 180 - 30;
+      }
+      starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+      const starMat = new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.45, transparent: true, opacity: 0.4 });
+      tStarField = new THREE.Points(starGeo, starMat);
+      tScene.add(tStarField);
+
+      // Geometria compartilhada para os 118 cartões 3D
+      const cardGeo = new THREE.BoxGeometry(2.35, 2.75, 0.14);
+
+      ELEMENTS.forEach((el, idx) => {
+        const frontTex = createElementCardTexture(el);
+        const sideMat = new THREE.MeshBasicMaterial({
+          color: el.category.hex,
+          transparent: true,
+          opacity: 0.65
+        });
+        const faceMat = new THREE.MeshBasicMaterial({
+          map: frontTex,
+          transparent: true,
+          opacity: 1.0
+        });
+
+        // 6 faces do BoxGeometry: direita, esquerda, topo, base, frente, trás
+        const materials = [sideMat, sideMat, sideMat, sideMat, faceMat, faceMat];
+        const mesh = new THREE.Mesh(cardGeo, materials);
+
+        // Posição inicial no layout Tabela
+        const tx = (el.col - 9.5) * 2.65;
+        const ty = -(el.row - 5.2) * 3.05 + (el.row >= 9 ? -1.1 : 0);
+        const tz = 0;
+
+        mesh.position.set(tx, ty, tz);
+        mesh.userData = {
+          element: el,
+          index: idx,
+          targetPos: new THREE.Vector3(tx, ty, tz),
+          targetRot: new THREE.Euler(0, 0, 0),
+          baseZOffset: 0,
+          targetOpacity: 1.0,
+          targetScale: 1.0
+        };
+
+        tScene.add(mesh);
+        cardMeshes.push(mesh);
+
+        // 1. Alvo: TABELA PERIÓDICA CLÁSSICA
+        targets.table.push({
+          pos: new THREE.Vector3(tx, ty, tz),
+          rot: new THREE.Euler(0, 0, 0)
+        });
+
+        // 2. Alvo: ESFERA 3D DE FIBONACCI
+        const phi = Math.acos(-1 + (2 * idx + 1) / ELEMENTS.length);
+        const theta = Math.sqrt(ELEMENTS.length * Math.PI) * phi;
+        const sphereRadius = 21;
+        const spPos = new THREE.Vector3().setFromSphericalCoords(sphereRadius, phi, theta);
+        const dummy = new THREE.Object3D();
+        dummy.position.copy(spPos);
+        dummy.lookAt(spPos.clone().multiplyScalar(2));
+        targets.sphere.push({
+          pos: spPos,
+          rot: dummy.rotation.clone()
+        });
+
+        // 3. Alvo: HÉLICE DUPLA (ESPIRAL 3D)
+        const hAngle = idx * 0.28 + (idx % 2) * Math.PI;
+        const hY = -((idx - 59) * 0.42);
+        const hRadius = 18;
+        const hx = Math.sin(hAngle) * hRadius;
+        const hz = Math.cos(hAngle) * hRadius;
+        const hPos = new THREE.Vector3(hx, hY, hz);
+        dummy.position.copy(hPos);
+        dummy.lookAt(new THREE.Vector3(hx * 2, hY, hz * 2));
+        targets.helix.push({
+          pos: hPos,
+          rot: dummy.rotation.clone()
+        });
+
+        // 4. Alvo: GRADE 3D EM CAMADAS (5x5x5)
+        const gx = ((idx % 5) - 2) * 6.2;
+        const gy = (-(Math.floor(idx / 5) % 5) + 2) * 5.8;
+        const gz = (Math.floor(idx / 25) - 2) * 8.5;
+        targets.grid.push({
+          pos: new THREE.Vector3(gx, gy, gz),
+          rot: new THREE.Euler(0, 0, 0)
+        });
+      });
+
+      // Eventos de interação (Mouse e Touch) no Canvas da Tabela
+      const domEl = tRenderer.domElement;
+      let pointerDownPos = { x: 0, y: 0 };
+
+      domEl.addEventListener('pointerdown', (e) => {
+        pointerDownPos.x = e.clientX;
+        pointerDownPos.y = e.clientY;
+      });
+
+      domEl.addEventListener('pointermove', (e) => {
+        if (appState.isModalOpen) return;
+        const rect = domEl.getBoundingClientRect();
+        tMouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        tMouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        checkTableHover(e.clientX, e.clientY);
+      });
+
+      domEl.addEventListener('pointerup', (e) => {
+        if (appState.isModalOpen) return;
+        const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+        // Se foi um clique/toque rápido (não um arrasto de câmera)
+        if (dist < 7) {
+          const rect = domEl.getBoundingClientRect();
+          tMouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          tMouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          tRaycaster.setFromCamera(tMouse, tCamera);
+          const intersects = tRaycaster.intersectObjects(cardMeshes);
+          if (intersects.length > 0) {
+            const clickedEl = intersects[0].object.userData.element;
+            openAtomInspector(clickedEl);
+          }
+        }
+      });
+    }
+
+    function setResponsiveTableCamera() {
+      const aspect = window.innerWidth / window.innerHeight;
+      if (aspect < 0.75) {
+        tCamera.position.set(0, -1, 88);
+      } else if (aspect < 1.2) {
+        tCamera.position.set(0, -1, 68);
+      } else {
+        tCamera.position.set(0, -1, 52);
+      }
+    }
+
+    function checkTableHover(clientX, clientY) {
+      tRaycaster.setFromCamera(tMouse, tCamera);
+      const intersects = tRaycaster.intersectObjects(cardMeshes);
+      const tooltip = document.getElementById('hover-tooltip');
+
+      if (intersects.length > 0) {
+        const hitMesh = intersects[0].object;
+        const el = hitMesh.userData.element;
+        document.body.style.cursor = 'pointer';
+        hoveredCard = hitMesh;
+
+        // Atualizar e posicionar Tooltip
+        document.getElementById('tt-z').textContent = `Z = ${el.z}`;
+        const ttCat = document.getElementById('tt-cat');
+        ttCat.textContent = el.category.short;
+        ttCat.style.backgroundColor = `rgba(${el.category.rgb.join(',')}, 0.22)`;
+        ttCat.style.color = el.category.hex;
+
+        document.getElementById('tt-sym').textContent = el.symbol;
+        document.getElementById('tt-name').textContent = el.name;
+        document.getElementById('tt-mass').textContent = `${el.mass} u`;
+        document.getElementById('tt-daily').textContent = el.cotidiano;
+        document.getElementById('tt-shells').textContent = `Camadas: ${el.shells.join(' - ')}`;
+
+        tooltip.classList.remove('hidden');
+        const x = Math.min(window.innerWidth - 270, clientX + 16);
+        const y = Math.min(window.innerHeight - 170, clientY + 16);
+        tooltip.style.left = `${Math.max(10, x)}px`;
+        tooltip.style.top = `${Math.max(10, y)}px`;
+      } else {
+        hoveredCard = null;
+        document.body.style.cursor = 'default';
+        tooltip.classList.add('hidden');
+      }
+    }
+
+    // Mudar Layout 3D (Tabela, Esfera, Hélice, Grade)
+    function setTableLayout(mode) {
+      appState.layoutMode = mode;
+      const list = targets[mode];
+      cardMeshes.forEach((mesh, idx) => {
+        mesh.userData.targetPos.copy(list[idx].pos);
+        mesh.userData.targetRot.copy(list[idx].rot);
+      });
+
+      // Ajustar distância ideal da câmera para cada modo
+      if (mode === 'table') {
+        setResponsiveTableCamera();
+        tControls.target.set(0, -1, 0);
+      } else if (mode === 'sphere') {
+        tCamera.position.set(0, 6, 46);
+        tControls.target.set(0, 0, 0);
+      } else if (mode === 'helix') {
+        tCamera.position.set(0, 8, 52);
+        tControls.target.set(0, 0, 0);
+      } else if (mode === 'grid') {
+        tCamera.position.set(16, 12, 54);
+        tControls.target.set(0, 0, 0);
+      }
+    }
+
+    // Filtrar elementos por busca textual e/ou família química
+    function applyFiltersAndSearch() {
+      const q = appState.searchQuery.trim().toLowerCase();
+      const cat = appState.activeCategory;
+
+      cardMeshes.forEach(mesh => {
+        const el = mesh.userData.element;
+        const matchesCat = (cat === null) || (el.catId === cat);
+        const matchesQuery = !q ||
+          el.name.toLowerCase().includes(q) ||
+          el.symbol.toLowerCase() === q ||
+          String(el.z) === q ||
+          el.cotidiano.toLowerCase().includes(q) ||
+          el.exemplos.some(ex => ex.toLowerCase().includes(q));
+
+        const isMatch = matchesCat && matchesQuery;
+        mesh.userData.targetOpacity = isMatch ? 1.0 : 0.14;
+        mesh.userData.targetScale = isMatch ? (q || cat !== null ? 1.08 : 1.0) : 0.82;
+        mesh.userData.baseZOffset = (isMatch && (q || cat !== null) && appState.layoutMode === 'table') ? 2.2 : 0;
+      });
+    }
+
+    // =========================================================================
+    // 5. CENA 2: VISUALIZADOR ATÔMICO 3D DEDICADO (NÚCLEO + ELÉTRONS REAIS)
+    // =========================================================================
+    let aScene, aCamera, aRenderer, aControls;
+    let aNucleusGroup, aOrbitsGroup;
+    let aNucleonList = [];
+    let aElectronList = [];
+    let aRingMeshes = [];
+    let aGlowTex;
+
+    function createAtomGlowTexture(rgbaStr) {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.28, rgbaStr);
+      g.addColorStop(0.65, 'rgba(34,211,238,0.18)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    }
+
+    function initAtomViewer3D() {
+      const wrapper = document.getElementById('atom-canvas-wrapper');
+      const w = wrapper.clientWidth || 600;
+      const h = wrapper.clientHeight || 450;
+
+      aScene = new THREE.Scene();
+
+      aCamera = new THREE.PerspectiveCamera(50, w / h, 0.1, 300);
+      aCamera.position.set(0, 10, 28);
+
+      aRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      aRenderer.setSize(w, h);
+      aRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      wrapper.appendChild(aRenderer.domElement);
+
+      aControls = new THREE.OrbitControls(aCamera, aRenderer.domElement);
+      aControls.enableDamping = true;
+      aControls.dampingFactor = 0.06;
+      aControls.minDistance = 6;
+      aControls.maxDistance = 85;
+      aControls.autoRotate = true;
+      aControls.autoRotateSpeed = 0.7;
+
+      // Iluminação do Átomo
+      const amb = new THREE.AmbientLight(0xffffff, 0.75);
+      aScene.add(amb);
+
+      const dLight1 = new THREE.DirectionalLight(0xffffff, 1.35);
+      dLight1.position.set(18, 24, 20);
+      aScene.add(dLight1);
+
+      const dLight2 = new THREE.DirectionalLight(0x38bdf8, 0.9);
+      dLight2.position.set(-18, -15, -15);
+      aScene.add(dLight2);
+
+      aGlowTex = createAtomGlowTexture('rgba(34, 211, 238, 0.9)');
+
+      aNucleusGroup = new THREE.Group();
+      aOrbitsGroup = new THREE.Group();
+      aScene.add(aNucleusGroup);
+      aScene.add(aOrbitsGroup);
+    }
+
+    function clearThreeGroup(group) {
+      while (group.children.length > 0) {
+        const obj = group.children[0];
+        if (obj.children && obj.children.length > 0) clearThreeGroup(obj);
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) {
+          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+          else obj.material.dispose();
+        }
+        group.remove(obj);
+      }
+    }
+
+    // Constrói em 3D o Átomo de qualquer um dos 118 elementos (Z=1 até Z=118)
+    function buildAtom3DForElement(el) {
+      if (!aScene) initAtomViewer3D();
+
+      clearThreeGroup(aNucleusGroup);
+      clearThreeGroup(aOrbitsGroup);
+      aNucleonList = [];
+      aElectronList = [];
+      aRingMeshes = [];
+
+      // -------------------------------------------------------------
+      // 1. NÚCLEO (Prótons Vermelhos e Nêutrons Azuis em Esfera Compacta)
+      // -------------------------------------------------------------
+      const totalNucleons = el.protons + el.neutrons;
+      // Para elementos superpesados (até 294 núcleons), ajustamos a escala das esferas para um núcleo denso e fluido
+      const visualNucleons = Math.min(totalNucleons, 140);
+      const nucleonRadius = totalNucleons === 1 ? 0.85 : Math.max(0.32, 0.68 - Math.cbrt(totalNucleons) * 0.055);
+      const nGeo = new THREE.SphereGeometry(nucleonRadius, 20, 20);
+
+      const protonMat = new THREE.MeshStandardMaterial({
+        color: 0xff2a55,
+        emissive: 0x550015,
+        roughness: 0.25,
+        metalness: 0.2
+      });
+      const neutronMat = new THREE.MeshStandardMaterial({
+        color: 0x2563eb,
+        emissive: 0x0a1e5e,
+        roughness: 0.25,
+        metalness: 0.2
+      });
+
+      const pRatio = el.protons / Math.max(1, totalNucleons);
+      const clusterRadius = totalNucleons === 1 ? 0 : Math.cbrt(visualNucleons) * nucleonRadius * 0.72;
+
+      for (let i = 0; i < visualNucleons; i++) {
+        const isProton = ((i * pRatio) % 1) < pRatio || i === 0;
+        const mesh = new THREE.Mesh(nGeo, isProton ? protonMat : neutronMat);
+
+        let basePos = new THREE.Vector3(0, 0, 0);
+        if (visualNucleons > 1) {
+          const phi = Math.acos(1 - 2 * (i + 0.5) / visualNucleons);
+          const theta = Math.PI * (1 + Math.sqrt(5)) * (i + 0.5);
+          const r = clusterRadius * (0.65 + 0.35 * ((i % 4) / 3));
+          basePos.setFromSphericalCoords(r, phi, theta);
+        }
+
+        mesh.position.copy(basePos);
+        aNucleusGroup.add(mesh);
+        aNucleonList.push({
+          mesh,
+          basePos: basePos.clone(),
+          phase: i * 0.4,
+          speed: 3.5 + (i % 5) * 0.4
+        });
+      }
+
+      // Halo central energético do núcleo
+      const haloMat = new THREE.SpriteMaterial({
+        map: createAtomGlowTexture(`rgba(${el.category.rgb.join(',')}, 0.55)`),
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false
+      });
+      const halo = new THREE.Sprite(haloMat);
+      const hSize = Math.max(4.5, clusterRadius * 3.8);
+      halo.scale.set(hSize, hSize, 1);
+      aNucleusGroup.add(halo);
+
+      // -------------------------------------------------------------
+      // 2. CAMADAS ELETRÔNICAS (K, L, M, N, O, P, Q) E ELÉTRONS
+      // -------------------------------------------------------------
+      const numShells = el.shells.length;
+      const baseShellR = Math.max(3.6, clusterRadius + 2.2);
+      const shellStep = numShells > 5 ? 2.15 : 2.55;
+
+      const eGeo = new THREE.SphereGeometry(0.24, 16, 16);
+
+      if (appState.atomMode === 'bohr') {
+        // MODO CAMADAS DE BOHR 3D: Cada camada (K..Q) é um anel concêntrico com sua cor e número exato de elétrons
+        el.shells.forEach((eCount, sIdx) => {
+          const radius = baseShellR + sIdx * shellStep;
+          const shellColor = SHELL_COLORS[sIdx % SHELL_COLORS.length];
+
+          const pivot = new THREE.Group();
+          // Leve inclinação harmônica entre camadas para percepção 3D
+          pivot.rotation.x = Math.PI / 2.25 + (sIdx % 2 === 0 ? 0.1 : -0.1) * (sIdx * 0.4);
+          pivot.rotation.y = (sIdx * 0.14);
+          aOrbitsGroup.add(pivot);
+
+          const ringGeo = new THREE.TorusGeometry(radius, 0.032, 12, 120);
+          const ringMat = new THREE.MeshBasicMaterial({
+            color: shellColor,
+            transparent: true,
+            opacity: 0.42
+          });
+          const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+          ringMesh.visible = appState.atomShowRings;
+          pivot.add(ringMesh);
+          aRingMeshes.push(ringMesh);
+
+          const eMat = new THREE.MeshBasicMaterial({ color: shellColor });
+          const angularSpeed = Math.max(0.45, 2.1 - sIdx * 0.24) * (sIdx % 2 === 0 ? 1 : -1);
+
+          for (let j = 0; j < eCount; j++) {
+            const eMesh = new THREE.Mesh(eGeo, eMat);
+            const spMat = new THREE.SpriteMaterial({
+              map: aGlowTex,
+              color: shellColor,
+              transparent: true,
+              blending: THREE.AdditiveBlending,
+              depthWrite: false
+            });
+            const sp = new THREE.Sprite(spMat);
+            sp.scale.set(1.45, 1.45, 1.45);
+            eMesh.add(sp);
+
+            pivot.add(eMesh);
+            aElectronList.push({
+              mesh: eMesh,
+              radius: radius,
+              speed: angularSpeed,
+              angle: (j * Math.PI * 2) / eCount
+            });
+          }
+        });
+      } else {
+        // MODO ÓRBITAS DE RUTHERFORD 3D: Planos orbitais cruzados inclinados no espaço 3D
+        el.shells.forEach((eCount, sIdx) => {
+          const radius = baseShellR + sIdx * shellStep;
+          const shellColor = SHELL_COLORS[sIdx % SHELL_COLORS.length];
+          const eMat = new THREE.MeshBasicMaterial({ color: shellColor });
+
+          // Dividir elétrons da camada em até 4 planos inclinados por nível
+          const planesCount = Math.min(4, Math.max(1, Math.ceil(eCount / 4)));
+          const perPlane = Math.ceil(eCount / planesCount);
+
+          for (let p = 0; p < planesCount; p++) {
+            const startIdx = p * perPlane;
+            const countHere = Math.min(perPlane, eCount - startIdx);
+            if (countHere <= 0) continue;
+
+            const pivot = new THREE.Group();
+            pivot.rotation.set(
+              Math.PI / 3 + (p * Math.PI) / planesCount + sIdx * 0.25,
+              (p * Math.PI) / (planesCount + 0.5) + sIdx * 0.4,
+              (sIdx * 0.3)
+            );
+            aOrbitsGroup.add(pivot);
+
+            const ringGeo = new THREE.TorusGeometry(radius, 0.025, 12, 100);
+            const ringMat = new THREE.MeshBasicMaterial({
+              color: shellColor,
+              transparent: true,
+              opacity: 0.28
+            });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.visible = appState.atomShowRings;
+            pivot.add(ringMesh);
+            aRingMeshes.push(ringMesh);
+
+            const angularSpeed = Math.max(0.55, 2.2 - sIdx * 0.22) * (p % 2 === 0 ? 1 : 0.85);
+
+            for (let j = 0; j < countHere; j++) {
+              const eMesh = new THREE.Mesh(eGeo, eMat);
+              const spMat = new THREE.SpriteMaterial({
+                map: aGlowTex,
+                color: shellColor,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+              });
+              const sp = new THREE.Sprite(spMat);
+              sp.scale.set(1.4, 1.4, 1.4);
+              eMesh.add(sp);
+
+              pivot.add(eMesh);
+              aElectronList.push({
+                mesh: eMesh,
+                radius: radius,
+                speed: angularSpeed,
+                angle: (j * Math.PI * 2) / countHere + p * 0.6
+              });
+            }
+          }
+        });
+      }
+
+      // Ajustar zoom da câmera do átomo automaticamente conforme o tamanho do átomo (camadas K..Q)
+      const maxOrbitR = baseShellR + (numShells - 1) * shellStep;
+      const idealCamZ = Math.max(16, maxOrbitR * 2.35);
+      aCamera.position.set(0, idealCamZ * 0.35, idealCamZ);
+      aControls.target.set(0, 0, 0);
+      aControls.update();
+
+      setTimeout(resizeAtomCanvas, 20);
+    }
+
+    function resizeAtomCanvas() {
+      if (!aRenderer || !aCamera) return;
+      const wrapper = document.getElementById('atom-canvas-wrapper');
+      const w = wrapper.clientWidth;
+      const h = wrapper.clientHeight;
+      if (w > 0 && h > 0) {
+        aCamera.aspect = w / h;
+        aCamera.updateProjectionMatrix();
+        aRenderer.setSize(w, h);
+      }
+    }
+
+    // =========================================================================
+    // 6. ABERTURA E ATUALIZAÇÃO DO PAINEL DE INSPEÇÃO DO ELEMENTO
+    // =========================================================================
+    function openAtomInspector(el) {
+      appState.selectedElement = el;
+      appState.isModalOpen = true;
+
+      document.getElementById('hover-tooltip').classList.add('hidden');
+      document.getElementById('footer-current-el').textContent = `${el.name} (${el.symbol})`;
+
+      const modal = document.getElementById('atom-modal');
+      modal.classList.remove('hidden');
+
+      // Crachá e cabeçalho
+      const badgeBox = document.getElementById('modal-badge-box');
+      badgeBox.style.borderColor = el.category.hex;
+      badgeBox.style.backgroundColor = `rgba(${el.category.rgb.join(',')}, 0.18)`;
+
+      document.getElementById('modal-el-z').textContent = el.z;
+      document.getElementById('modal-el-z').style.color = el.category.hex;
+      document.getElementById('modal-el-sym').textContent = el.symbol;
+      document.getElementById('modal-el-mass-mini').textContent = `${el.mass} u`;
+      document.getElementById('modal-el-name').textContent = el.name;
+      document.getElementById('modal-el-state').textContent = el.state;
+      document.getElementById('modal-el-cat').textContent = el.category.name;
+      document.getElementById('modal-el-cat').style.color = el.category.hex;
+
+      // Contadores de partículas
+      document.getElementById('modal-p-count').textContent = el.protons;
+      document.getElementById('modal-n-count').textContent = el.neutrons;
+      document.getElementById('modal-e-count').textContent = el.electrons;
+
+      // Botões Anterior e Próximo (1..118 ciclando)
+      const prevEl = ELEMENTS[(el.z - 2 + ELEMENTS.length) % ELEMENTS.length];
+      const nextEl = ELEMENTS[el.z % ELEMENTS.length];
+      document.getElementById('prev-el-label').textContent = `${prevEl.z} ${prevEl.symbol}`;
+      document.getElementById('next-el-label').textContent = `${nextEl.z} ${nextEl.symbol}`;
+
+      // Card: Onde Encontrar no Cotidiano
+      document.getElementById('modal-cotidiano-text').textContent = el.cotidiano;
+      const exContainer = document.getElementById('modal-examples-list');
+      exContainer.innerHTML = '';
+      el.exemplos.forEach(ex => {
+        const chip = document.createElement('span');
+        chip.className = 'text-xs font-semibold px-3 py-1 rounded-xl bg-cyan-500/15 text-cyan-200 border border-cyan-400/30 flex items-center gap-1.5';
+        chip.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>${ex}`;
+        exContainer.appendChild(chip);
+      });
+
+      // Camadas Eletrônicas (K, L, M, N, O, P, Q)
+      const valenceElectrons = el.shells[el.shells.length - 1];
+      document.getElementById('modal-valence-info').textContent = `Camada de Valência (${SHELL_NAMES[el.shells.length - 1]}): ${valenceElectrons} e⁻`;
+
+      const shellsContainer = document.getElementById('modal-shells-bars');
+      shellsContainer.innerHTML = '';
+      const maxCap = [2, 8, 18, 32, 32, 18, 8];
+
+      for (let i = 0; i < 7; i++) {
+        const count = el.shells[i] || 0;
+        const hexCol = '#' + SHELL_COLORS[i].toString(16).padStart(6, '0');
+        const colDiv = document.createElement('div');
+        colDiv.className = `rounded-xl p-2 border flex flex-col items-center justify-between ${count > 0 ? 'bg-slate-900 border-slate-700' : 'bg-slate-950/40 border-slate-800/50 opacity-40'}`;
+        colDiv.innerHTML = `
+          <span class="text-[10px] font-mono-code font-bold" style="color:${hexCol}">${SHELL_NAMES[i]}</span>
+          <span class="text-sm font-extrabold text-white font-mono-code my-1">${count}</span>
+          <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-full rounded-full" style="width:${Math.min(100, (count / maxCap[i]) * 100)}%; background:${hexCol}"></div>
+          </div>
+        `;
+        shellsContainer.appendChild(colDiv);
+      }
+
+      // Subníveis
+      document.getElementById('modal-subshells').textContent = el.subshells;
+
+      // Propriedades Físicas e Atômicas
+      document.getElementById('prop-z').textContent = el.z;
+      document.getElementById('prop-mass').textContent = `${el.mass} u`;
+      document.getElementById('prop-state').textContent = el.state;
+      document.getElementById('prop-period').textContent = `${el.shells.length}º Período (${el.shells.length} camadas)`;
+      const groupText = (el.row >= 9) ? (el.row === 9 ? 'Série Lantanídeos' : 'Série Actinídeos') : `Grupo ${el.col}`;
+      document.getElementById('prop-group').textContent = groupText;
+      document.getElementById('prop-nucleons').textContent = `${el.protons + el.neutrons} (${el.protons}p + ${el.neutrons}n)`;
+
+      // Construir o Átomo 3D para este elemento
+      buildAtom3DForElement(el);
+    }
+
+    function closeAtomInspector() {
+      appState.isModalOpen = false;
+      document.getElementById('atom-modal').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // 7. INTERFACE E EVENTOS DOM
+    // =========================================================================
+    function setupUIEvents() {
+      // Gerar botões de filtro por família química
+      const catBar = document.getElementById('category-filters');
+
+      const allBtn = document.createElement('button');
+      allBtn.dataset.cat = 'all';
+      allBtn.className = 'cat-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 shadow-md transition';
+      allBtn.textContent = 'Todos (118)';
+      allBtn.addEventListener('click', () => selectCategoryFilter(null));
+      catBar.appendChild(allBtn);
+
+      CATEGORIES.forEach(c => {
+        const btn = document.createElement('button');
+        btn.dataset.cat = c.id;
+        btn.className = 'cat-pill shrink-0 glass-panel hover:bg-slate-800 border border-slate-700/80 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition';
+        btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background:${c.hex}; box-shadow: 0 0 8px ${c.hex}"></span><span>${c.short}</span>`;
+        btn.addEventListener('click', () => selectCategoryFilter(c.id));
+        catBar.appendChild(btn);
+      });
+
+      // Campo de busca
+      const searchInput = document.getElementById('search-input');
+      const clearBtn = document.getElementById('clear-search');
+
+      searchInput.addEventListener('input', (e) => {
+        appState.searchQuery = e.target.value;
+        clearBtn.classList.toggle('hidden', !appState.searchQuery);
+        applyFiltersAndSearch();
+      });
+
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        appState.searchQuery = '';
+        clearBtn.classList.add('hidden');
+        applyFiltersAndSearch();
+      });
+
+      // Botões de modo de Layout 3D (Tabela, Esfera, Hélice, Grade)
+      document.querySelectorAll('.layout-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const mode = btn.dataset.layout;
+          setTableLayout(mode);
+          applyFiltersAndSearch();
+
+          document.querySelectorAll('.layout-btn').forEach(b => {
+            if (b.dataset.layout === mode) {
+              b.className = 'layout-btn px-2.5 py-1.5 rounded-lg text-xs font-bold bg-cyan-500 text-slate-950 shadow transition';
+            } else {
+              b.className = 'layout-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition';
+            }
+          });
+        });
+      });
+
+      // Resetar câmera da Tabela 3D
+      document.getElementById('btn-reset-table-cam').addEventListener('click', () => {
+        setTableLayout(appState.layoutMode);
+      });
+
+      // Abrir átomo atual pelo botão do rodapé
+      document.getElementById('btn-open-current-atom').addEventListener('click', () => {
+        openAtomInspector(appState.selectedElement);
+      });
+
+      // Controles dentro do Modal do Átomo
+      document.getElementById('btn-close-modal').addEventListener('click', closeAtomInspector);
+
+      document.getElementById('btn-prev-el').addEventListener('click', () => {
+        const idx = (appState.selectedElement.z - 2 + ELEMENTS.length) % ELEMENTS.length;
+        openAtomInspector(ELEMENTS[idx]);
+      });
+
+      document.getElementById('btn-next-el').addEventListener('click', () => {
+        const idx = appState.selectedElement.z % ELEMENTS.length;
+        openAtomInspector(ELEMENTS[idx]);
+      });
+
+      // Alternar entre Camadas de Bohr e Órbitas de Rutherford
+      const btnBohr = document.getElementById('atom-mode-bohr');
+      const btnRuth = document.getElementById('atom-mode-rutherford');
+
+      btnBohr.addEventListener('click', () => {
+        appState.atomMode = 'bohr';
+        btnBohr.className = 'px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-cyan-500 text-slate-950 transition';
+        btnRuth.className = 'px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 hover:text-white transition';
+        buildAtom3DForElement(appState.selectedElement);
+      });
+
+      btnRuth.addEventListener('click', () => {
+        appState.atomMode = 'rutherford';
+        btnRuth.className = 'px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-cyan-500 text-slate-950 transition';
+        btnBohr.className = 'px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 hover:text-white transition';
+        buildAtom3DForElement(appState.selectedElement);
+      });
+
+      // Velocidade orbital do átomo
+      document.getElementById('atom-speed-slider').addEventListener('input', (e) => {
+        appState.atomSpeed = parseFloat(e.target.value);
+      });
+
+      // Mostrar/ocultar anéis do átomo
+      const btnRings = document.getElementById('btn-toggle-atom-rings');
+      btnRings.addEventListener('click', () => {
+        appState.atomShowRings = !appState.atomShowRings;
+        btnRings.textContent = `Anéis: ${appState.atomShowRings ? 'ON' : 'OFF'}`;
+        aRingMeshes.forEach(r => { r.visible = appState.atomShowRings; });
+      });
+
+      // Pausar animação do átomo
+      const btnPauseAtom = document.getElementById('btn-pause-atom');
+      btnPauseAtom.addEventListener('click', () => {
+        appState.atomPaused = !appState.atomPaused;
+        btnPauseAtom.textContent = appState.atomPaused ? '▶ Continuar' : '⏸ Pausar';
+      });
+
+      // Atalhos de teclado (ESC fecha modal, Setas navegam de Z=1 a Z=118)
+      window.addEventListener('keydown', (e) => {
+        if (!appState.isModalOpen) return;
+        if (e.key === 'Escape') closeAtomInspector();
+        if (e.key === 'ArrowLeft') document.getElementById('btn-prev-el').click();
+        if (e.key === 'ArrowRight') document.getElementById('btn-next-el').click();
+      });
+
+      window.addEventListener('resize', () => {
+        if (tCamera && tRenderer) {
+          tCamera.aspect = window.innerWidth / window.innerHeight;
+          tCamera.updateProjectionMatrix();
+          tRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        if (appState.isModalOpen) {
+          resizeAtomCanvas();
+        }
+      });
+    }
+
+    function selectCategoryFilter(catId) {
+      appState.activeCategory = (appState.activeCategory === catId) ? null : catId;
+      applyFiltersAndSearch();
+
+      document.querySelectorAll('.cat-pill').forEach(btn => {
+        const isAll = btn.dataset.cat === 'all';
+        const active = (isAll && appState.activeCategory === null) ||
+                       (!isAll && parseInt(btn.dataset.cat) === appState.activeCategory);
+
+        if (active) {
+          btn.className = 'cat-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(34,211,238,0.4)] flex items-center gap-1.5 transition';
+        } else {
+          btn.className = 'cat-pill shrink-0 glass-panel hover:bg-slate-800 border border-slate-700/80 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition';
+        }
+      });
+    }
+
+    // =========================================================================
+    // 8. LOOP DE ANIMAÇÃO PRINCIPAL (TABELA 3D + ÁTOMO 3D)
+    // =========================================================================
+    const mainClock = new THREE.Clock();
+    let atomElapsed = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(mainClock.getDelta(), 0.1);
+
+      // A) Se o modal do Átomo 3D estiver aberto, animar o Átomo em tempo real
+      if (appState.isModalOpen && aRenderer && aScene && aCamera) {
+        if (!appState.atomPaused) {
+          atomElapsed += delta;
+
+          // Vibração e rotação orgânica do núcleo
+          aNucleusGroup.rotation.y += delta * 0.35;
+          aNucleusGroup.rotation.x += delta * 0.18;
+          const pulse = 1 + Math.sin(atomElapsed * 4.5) * 0.03;
+          aNucleusGroup.scale.set(pulse, pulse, pulse);
+
+          // Movimento orbital de todos os elétrons (1 até 118)
+          aElectronList.forEach(el => {
+            el.angle += delta * el.speed * appState.atomSpeed;
+            el.mesh.position.x = Math.cos(el.angle) * el.radius;
+            el.mesh.position.y = Math.sin(el.angle) * el.radius;
+          });
+        }
+        aControls.update();
+        aRenderer.render(aScene, aCamera);
+      }
+
+      // B) Animar suavemente os 118 blocos da Tabela Periódica 3D
+      if (tRenderer && tScene && tCamera) {
+        const lerpFactor = 0.085;
+
+        for (let i = 0; i < cardMeshes.length; i++) {
+          const mesh = cardMeshes[i];
+          const ud = mesh.userData;
+          const isHovered = (hoveredCard === mesh);
+
+          // Destino com offset de hover ou filtro
+          const destX = ud.targetPos.x;
+          const destY = ud.targetPos.y;
+          const destZ = ud.targetPos.z + ud.baseZOffset + (isHovered ? 1.8 : 0);
+
+          mesh.position.x += (destX - mesh.position.x) * lerpFactor;
+          mesh.position.y += (destY - mesh.position.y) * lerpFactor;
+          mesh.position.z += (destZ - mesh.position.z) * lerpFactor;
+
+          // Interpolação de rotação
+          mesh.rotation.x += (ud.targetRot.x - mesh.rotation.x) * lerpFactor;
+          mesh.rotation.y += (ud.targetRot.y - mesh.rotation.y) * lerpFactor;
+          mesh.rotation.z += (ud.targetRot.z - mesh.rotation.z) * lerpFactor;
+
+          // Escala suave no hover
+          const sTarget = isHovered ? 1.22 : ud.targetScale;
+          const nextScale = mesh.scale.x + (sTarget - mesh.scale.x) * 0.14;
+          mesh.scale.set(nextScale, nextScale, nextScale);
+
+          // Opacidade suave para filtros e busca
+          const faceMat = mesh.material[4];
+          const sideMat = mesh.material[0];
+          faceMat.opacity += (ud.targetOpacity - faceMat.opacity) * 0.12;
+          sideMat.opacity = faceMat.opacity * 0.65;
+        }
+
+        if (tStarField) {
+          tStarField.rotation.y += delta * 0.012;
+        }
+
+        tControls.update();
+        tRenderer.render(tScene, tCamera);
+      }
+    }
+
+    // Inicializar tudo ao carregar a janela
+    window.onload = function () {
+      setupUIEvents();
+      initPeriodicTable3D();
+      animate();
+    };
+  </script>
+</body>
+</html>
